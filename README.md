@@ -2,7 +2,7 @@
 
 
 
-# s3-log-ingestion-lambda [build badges go here when available]
+# s3-log-ingestion-lambda
 
 >AWS Serverless Application that sends log data from S3 to New Relic Logging.
 
