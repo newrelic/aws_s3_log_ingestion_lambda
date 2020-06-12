@@ -17,7 +17,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['newrelic', 'logs', 's3']
     HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
-    SemanticVersion: 0.0.1
+    SemanticVersion: 0.0.2
     SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
 
 Resources:
