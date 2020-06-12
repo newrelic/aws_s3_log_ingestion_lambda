@@ -15,11 +15,10 @@ Metadata:
     SpdxLicenseId: Apache-2.0
     LicenseUrl: LICENSE
     ReadmeUrl: README.md
-    Labels: ['tests']
-    # [UPDATE]: update to public new relic repo
-    HomePageUrl: https://github.com/user1/my-app-project
+    Labels: ['newrelic', 'logs', 's3']
+    HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
     SemanticVersion: 0.0.1
-    SourceCodeUrl: https://github.com/user1/my-app-project
+    SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
 
 Resources:
   NewRelicLogIngestionFunction:
