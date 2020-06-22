@@ -12,6 +12,10 @@
 
 >You will also need to configure your AWS credentials so that they are accessible from your local terminal: [Configuring the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html)
 
+> Max log file size in the s3 bucket is 150 MB uncompressed. Max supported individual log line size is 0.25 MB. Data beyond these limits will not get processed. 
+
+
+
 ## Installation
 
 ### Configure Lambda from AWS Severless Application Repository (SAR)
@@ -73,7 +77,6 @@ s3-log-ingestion-lambda is licensed under the [Apache 2.0](http://apache.org/lic
 This may mean either docker is not running or it has not been correctly set up. Please ensure docker is runnnig on your machine.
 
 
-.
 
 ```bash:
 An error occurred when creating the trigger: Configurations overlap. Configurations on the same bucket cannot share a common event type.
