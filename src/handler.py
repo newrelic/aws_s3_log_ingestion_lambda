@@ -8,6 +8,8 @@ from urllib import request
 import aiohttp
 import asyncio
 from smart_open import open
+from pympler import asizeof
+from hurry.filesize import size
 
 from dotenv import load_dotenv
 load_dotenv(verbose=True)
@@ -31,6 +33,12 @@ INITIAL_BACKOFF = 1
 BACKOFF_MULTIPLIER = 2
 # Max length in bytes of the payload
 MAX_PAYLOAD_SIZE = 1000 * 1024
+# Max length in bytes of an individual log line
+MAX_INDIVIDUAL_LOG_SIZE = 250 * 1024
+# Max file size in bytes (uncompressed)
+MAX_PAYLOAD_SIZE = 150 * 1000 * 1024
+# Multiplier for calculating batch sizes
+BATCH_SIZE_FACTOR = 1.5
 
 
 class MaxRetriesException(Exception):
@@ -148,6 +156,9 @@ def _reconstruct_log_payload(common, logs):
 
 
 async def _send_payload(request_creator, session, retry=False):
+    """
+    Send log payload to New Relic Logging API
+    """
     try:
         req = request_creator()
         status, url = await http_post(
@@ -247,6 +258,32 @@ def _package_log_payload(data):
             _reconstruct_log_payload(common, logs[half:]),
         ]
 
+def _fetch_data_from_s3(bucket, key, context):
+    """
+        Stream data from S3 bucket. Create batches of size MAX_PAYLOAD_SIZE*BATCH_SIZE_FACTOR
+        and create async requests from batches
+    """
+    log_file_url = "s3://{}/{}".format(bucket, key)
+    log_file_size = boto3.resource('s3').Bucket(bucket).Object(key).content_length
+    if log_file_size > MAX_PAYLOAD_SIZE:
+        print(f"The log file uploaded to S3 is larger than the supported max size of 150MB")
+        return
+    batch = []
+    for line in open(log_file_url, encoding='utf-8'):
+            if asizeof.asizeof(line) > MAX_INDIVIDUAL_LOG_SIZE:
+                print(f"Log line of size {asizeof.asizeof(line)} is greater than the 0.25MB max log line size. This log will be dropped.")
+                continue
+            try:
+                batch.append(json.loads(line))
+            except json.JSONDecodeError:
+                print(f"Log file is not in JSON format. Processing the log file as a string.")
+                batch.append(line)
+            if asizeof.asizeof(batch) > (MAX_PAYLOAD_SIZE*BATCH_SIZE_FACTOR):
+                asyncio.run(_send_log_entry(batch, context, bucket))
+                batch = []
+    asyncio.run(_send_log_entry(batch, context, bucket))
+
+
 ####################
 #  Lambda handler  #
 ####################
@@ -258,14 +295,7 @@ def lambda_handler(event, context):
     key = urllib.parse.unquote_plus(
         event['Records'][0]['s3']['object']['key'], encoding='utf-8')
     try:
-        log_file_url = "s3://{}/{}".format(bucket, key)
-        logLines_object = []
-        for line in open(log_file_url, encoding='utf-8'):
-            logLines_object.append(json.loads(line))
-
-        asyncio.run(_send_log_entry(logLines_object, context, bucket))
-
-        return event
+        _fetch_data_from_s3(bucket, key, context)
     except KeyError as e:
         print(e)
         print(
