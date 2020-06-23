@@ -19,9 +19,9 @@ s3 = boto3.client('s3')
 
 US_LOGGING_INGEST_HOST = "https://log-api.newrelic.com/log/v1"
 EU_LOGGING_INGEST_HOST = 'https://log-api.eu.newrelic.com/log/v1'
-LOGGING_LAMBDA_VERSION = '1.0.0'
+LOGGING_LAMBDA_VERSION = '1.0.2'
 LOGGING_PLUGIN_METADATA = {
-    'type': 's3-lambda',
+    'type': "s3-lambda",
     'version': LOGGING_LAMBDA_VERSION
 }
 
@@ -57,6 +57,14 @@ def _get_license_key(license_key=None):
         return license_key
     return os.getenv("LICENSE_KEY", "")
 
+
+def _get_log_type(log_type=None):
+    """
+    This functions gets the New Relic logtype from env vars.
+    """
+    if log_type:
+        return log_type
+    return os.getenv("logtype", "")
 
 def _debug_logging_enabled():
     """
@@ -198,10 +206,7 @@ async def _send_log_entry(logLines, context, bucket_name):
     server. If it is necessary, entries will be split in different payloads
     """
     s3MetaData = {
-        "function_name": context.function_name,
         "invoked_function_arn": context.invoked_function_arn,
-        "log_group_name": context.log_group_name,
-        "log_stream_name": context.log_stream_name,
         "s3_bucket_name": bucket_name
     }
 
@@ -227,18 +232,15 @@ def _package_log_payload(data):
 
     for line in logLines:
         log_messages.append({'message': line})
-
     packaged_payload = [
         {
             "common": {
                 "attributes": {
                     "plugin": LOGGING_PLUGIN_METADATA,
                     "aws": {
-                        "function_name": data["context"]["function_name"],
                         "invoked_function_arn":data["context"]["invoked_function_arn"],
-                        "log_group_name": data["context"]["log_group_name"],
-                        "log_stream_name": data["context"]["log_stream_name"],
                         "s3_bucket_name": data["context"]["s3_bucket_name"]},
+                        "logtype": _get_log_type()
                 }},
             "logs": log_messages,
         }]
