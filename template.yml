@@ -6,6 +6,10 @@ Parameters:
     Type: String
     Description: Your NewRelic license key. You may omit it when deploying the function.
     Default: "YOUR_LICENSE_KEY"
+  NRLogType:
+    Type: String
+    Description: Your NewRelic logtype. You may omit it when deploying the function.
+    Default: "YOUR_LOGTYPE"
 
 Metadata:
   AWS::ServerlessRepo::Application:
@@ -17,7 +21,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['newrelic', 'logs', 's3']
     HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
-    SemanticVersion: 0.0.2
+    SemanticVersion: 1.0.2
     SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
 
 Resources:
@@ -32,6 +36,7 @@ Resources:
       Environment:
         Variables: 
           LICENSE_KEY: !Ref NRLicenseKey
+          logtype: !Ref NRLogType
       Policies:
         - Version: '2012-10-17'
           Statement:
