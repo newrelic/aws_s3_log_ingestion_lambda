@@ -11,15 +11,11 @@ from smart_open import open
 from pympler import asizeof
 from hurry.filesize import size
 
-from dotenv import load_dotenv
-load_dotenv(verbose=True)
-
-
 s3 = boto3.client('s3')
 
 US_LOGGING_INGEST_HOST = "https://log-api.newrelic.com/log/v1"
 EU_LOGGING_INGEST_HOST = 'https://log-api.eu.newrelic.com/log/v1'
-LOGGING_LAMBDA_VERSION = '1.0.2'
+LOGGING_LAMBDA_VERSION = '1.0.3'
 LOGGING_PLUGIN_METADATA = {
     'type': "s3-lambda",
     'version': LOGGING_LAMBDA_VERSION
@@ -64,7 +60,7 @@ def _get_log_type(log_type=None):
     """
     if log_type:
         return log_type
-    return os.getenv("logtype", "")
+    return os.getenv("LOG_TYPE", "")
 
 def _debug_logging_enabled():
     """
