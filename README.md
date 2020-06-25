@@ -22,17 +22,17 @@
 
 ### Configure Lambda from AWS Severless Application Repository (SAR)
 
-> 1. Find "NewRelic-s3-log-ingestion" on the SAR (you have to check the "Show apps that create custom IAM roles or resource policies" box)
+> 1. Find "NewRelic-log-ingestion-s3" on the SAR (you have to check the "Show apps that create custom IAM roles or resource policies" box)
 > 2. Under "Application Settings" add your New Relic license key
-> 3. (Optional) Under "Application Settings" add your "logtype" 
+> 3. (Optional) Under "Application Settings" add your "LOG_TYPE" 
 > 4. Acknowledge that this app creates custom IAM roles and press the "Deploy" button
 > 5. Wait for the "resources" to be created
 > 6. Navigate to AWS Lambda and open the functions
-> 7. Find "NewRelic-s3-log-ingestion" in the list and click on the function name
-> 8. Click on "Add Trigger" and selet the "S3" trigger
-> 9. Configure you "Bucket" with the bucket name of where you are logging to. 
-> 10. Configure "EventType" to "all object create events
-> 11. Optionally configure "prefix" and "suffix"
+> 7. Find "NewRelic-log-ingestion-s3" in the list and click on the function name
+> 8. Click on "Add Trigger" and select the "S3" trigger
+> 9. Configure your "Bucket" with the bucket name of where you are logging to. 
+> 10. Configure "EventType" to "all object create events"
+> 11. (Optional) configure "prefix" and "suffix"
 > 12. Select "enable trigger" and click "Add"
 > 13. Congratulations your Lambda is successfully set up!
 > 14. To test your lambda setup:
@@ -44,16 +44,17 @@
 
 Follow these steps below to deploy the log ingestion function manually. 
 
-> 1. Clone this repository: `git clone <REPO>`
-> 2. Install Serverless: `npm install -g serverless`
-> 3. Install the serverless-python-requirements plugin: `npm install`
-> 4. If not running Linux, [install Docker](https://docs.docker.com/install/) and keep it running
-> 5. [Retrieve your New Relic License Key](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/license-key)
-> 6. Set the `LICENSE_KEY` environment variable: `export LICENSE_KEY=your-license-key-here`
-> 7. Set the optional `logtype` environment variable: `export logtype=your-log-type-here`
-> 8. Set the S3_BUCKET_NAME environment variable: `export S3_BUCKET_NAME=your-s3-bucket-name`
-> 9. [Optional] You can send logs from a specific location in the bucket only. Set the S3_Prefix (subdirectory name) `export S3_PREFIX=your-s3-subdirectory-name`
-> 10. Deploy the function: `serverless deploy`
+1. Clone this repository: `git clone <REPO>`
+2. Install Serverless: `npm install -g serverless`
+3. Install the serverless-python-requirements plugin: `npm install`
+4. If not running Linux, [install Docker](https://docs.docker.com/install/) and keep it running
+5. [Retrieve your New Relic License Key](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/license-key)
+6. Set the LICENSE_KEY environment variable: `export LICENSE_KEY=your-license-key-here`
+7. Set the SERVICE_NAME environment variable: `export SERVICE_NAME=your-service-name-here`
+8. Set the S3_BUCKET_NAME environment variable: `export S3_BUCKET_NAME=your-s3-bucket-name`
+9. [Optional] You can send logs from a specific location in the bucket only. Set the S3_Prefix (subdirectory name) `export S3_PREFIX=your-s3-subdirectory-name`
+10. [Optional] Set the LOG_TYPE (subdirectory name) `export LOG_TYPE=your-log-type-here`
+11. Deploy the function: `serverless deploy`
  
 
 
