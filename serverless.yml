@@ -41,7 +41,7 @@ functions:
     handler: src/handler.lambda_handler
     environment: 
       LICENSE_KEY: ${env:LICENSE_KEY}
-      logtype: ${env:logtype}
+      LOG_TYPE: ${env:LOG_TYPE}
     events:
       - s3:
           bucket: ${env:S3_BUCKET_NAME}
