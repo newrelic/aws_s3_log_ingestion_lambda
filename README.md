@@ -73,6 +73,9 @@ To execute our corporate CLA, which is required if your contribution is on behal
 s3-log-ingestion-lambda is licensed under the [Apache 2.0](http://apache.org/licenses/LICENSE-2.0.txt) License.
 > The s3-log-ingestion-lambda also uses source code from third party libraries. Full details on which libraries are used and the terms under which they are licensed can be found in the third party notices document.
 
+## Support
+Visit the support thread on [Explorer Hub](https://discuss.newrelic.com/t/aws-s3-log-ingestion-lambda/).
+
 ## Troubleshooting FAQs
 
 ```bash:
