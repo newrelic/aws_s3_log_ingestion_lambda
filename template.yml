@@ -21,7 +21,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['newrelic', 'logs', 'logging', 'ingestion', 'lambda', 's3']
     HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
-    SemanticVersion: 1.0.3
+    SemanticVersion: 1.0.5
     SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
 
 Resources:
@@ -32,7 +32,7 @@ Resources:
       CodeUri: src/
       Handler: handler.lambda_handler
       FunctionName: NewRelic-s3-log-ingestion
-      Timeout: 30
+      Timeout: 900
       Environment:
         Variables: 
           LICENSE_KEY: !Ref NRLicenseKey
