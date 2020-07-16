@@ -15,7 +15,7 @@ s3 = boto3.client('s3')
 
 US_LOGGING_INGEST_HOST = "https://log-api.newrelic.com/log/v1"
 EU_LOGGING_INGEST_HOST = 'https://log-api.eu.newrelic.com/log/v1'
-LOGGING_LAMBDA_VERSION = '1.0.3'
+LOGGING_LAMBDA_VERSION = '1.0.5'
 LOGGING_PLUGIN_METADATA = {
     'type': "s3-lambda",
     'version': LOGGING_LAMBDA_VERSION
@@ -32,18 +32,16 @@ MAX_PAYLOAD_SIZE = 1000 * 1024
 # Max length in bytes of an individual log line
 MAX_INDIVIDUAL_LOG_SIZE = 250 * 1024
 # Max file size in bytes (uncompressed)
-MAX_PAYLOAD_SIZE = 150 * 1000 * 1024
+MAX_FILE_SIZE = 150 * 1000 * 1024
 # Multiplier for calculating batch sizes
-BATCH_SIZE_FACTOR = 1.5
+BATCH_SIZE_FACTOR = 2
 
 
 class MaxRetriesException(Exception):
     pass
 
-
 class BadRequestException(Exception):
     pass
-
 
 def _get_license_key(license_key=None):
     """
@@ -112,7 +110,6 @@ async def http_post(session, url, data, headers):
 
 ####################
 
-
 def _get_logging_request_creator(payload, ingest_url=None, license_key=None):
     def create_request():
         req = request.Request(_get_logging_endpoint(ingest_url), payload)
@@ -175,7 +172,7 @@ async def _send_payload(request_creator, session, retry=False):
     except BadRequestException as e:
         print(e)
     else:
-        print("Log entry sent. Response code: {}. url: {}".format(status, url))
+        print("[INFO] Log entry sent. Response code: {}. url: {}".format(status, url))
         return status
 
 
@@ -263,18 +260,19 @@ def _fetch_data_from_s3(bucket, key, context):
     """
     log_file_url = "s3://{}/{}".format(bucket, key)
     log_file_size = boto3.resource('s3').Bucket(bucket).Object(key).content_length
-    if log_file_size > MAX_PAYLOAD_SIZE:
-        print(f"The log file uploaded to S3 is larger than the supported max size of 150MB")
+    if log_file_size > MAX_FILE_SIZE:
+        print(f"[WARN] The log file uploaded to S3 is larger than the supported max size of 150MB")
         return
     batch = []
-    for line in open(log_file_url, encoding='utf-8'):
+    with open(log_file_url, encoding='utf-8') as log_lines:
+        for line in log_lines:
             if asizeof.asizeof(line) > MAX_INDIVIDUAL_LOG_SIZE:
-                print(f"Log line of size {asizeof.asizeof(line)} is greater than the 0.25MB max log line size. This log will be dropped.")
+                print(f"[WARN] Log line of size {asizeof.asizeof(line)} is greater than the 0.25MB max log line size. This log will be dropped.")
                 continue
             try:
                 batch.append(json.loads(line))
             except json.JSONDecodeError:
-                print(f"Log file is not in JSON format. Processing the log file as a string.")
+                print(f"[WARN] Log file is not in JSON format. Processing the log file as a string.")
                 batch.append(line)
             if asizeof.asizeof(batch) > (MAX_PAYLOAD_SIZE*BATCH_SIZE_FACTOR):
                 asyncio.run(_send_log_entry(batch, context, bucket))
@@ -285,7 +283,6 @@ def _fetch_data_from_s3(bucket, key, context):
 ####################
 #  Lambda handler  #
 ####################
-
 
 def lambda_handler(event, context):
     # Get bucket from s3 upload event
