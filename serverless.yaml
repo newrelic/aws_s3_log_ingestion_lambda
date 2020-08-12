@@ -1,3 +1,4 @@
+---
 # Welcome to Serverless!
 #
 # This file is the main config file for your service.
@@ -13,8 +14,8 @@
 
 service: ${env:SERVICE_NAME}
 # app and org for use with dashboard.serverless.com
-#app: your-app-name
-#org: your-org-name
+# app: your-app-name
+# org: your-org-name
 
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
@@ -26,12 +27,12 @@ provider:
   iamRoleStatements:
     - Effect: "Allow"
       Action:
-       - "s3:GetObject"
+        - "s3:GetObject"
       Resource: "arn:aws:s3:::${env:S3_BUCKET_NAME}/*"
 
 plugins:
   - serverless-python-requirements
-  
+
 custom:
   pythonRequirements:
     dockerizePip: non-linux
@@ -39,7 +40,7 @@ custom:
 functions:
   NewRelic-s3-log-ingestion:
     handler: src/handler.lambda_handler
-    environment: 
+    environment:
       LICENSE_KEY: ${env:LICENSE_KEY}
       LOG_TYPE: ${env:LOG_TYPE}
     events:

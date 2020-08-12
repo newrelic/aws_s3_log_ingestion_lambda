@@ -1,6 +1,8 @@
+# AWS Lambda for sending logs from S3 to New Relic
+
 [![Community Project header](https://github.com/newrelic/open-source-office/raw/master/examples/categories/images/Community_Project.png)](https://github.com/newrelic/open-source-office/blob/master/examples/categories/index.md#community-project)
 
-# AWS Lambda for sending logs from S3 to New Relic
+---
 
 `s3-log-ingestion-lambda` is an AWS Serverless application that sends log data from an S3 bucket of your choice to New Relic.
 
@@ -23,4 +25,5 @@ Contributions to improve s3-log-ingestion-lambda are encouraged! Keep in mind wh
 To execute our corporate CLA, which is required if your contribution is on behalf of a company, or if you have any questions, please drop us an email at opensource@newrelic.com.
 
 ## License
-`s3-log-ingestion-lambda` is licensed under the [Apache 2.0](http://apache.org/licenses/LICENSE-2.0.txt) License. The s3-log-ingestion-lambda also uses source code from third party libraries. Full details on which libraries are used and the terms under which they are licensed can be found in the third party notices docume
+
+`s3-log-ingestion-lambda` is licensed under the [Apache 2.0](http://apache.org/licenses/LICENSE-2.0.txt) License. The s3-log-ingestion-lambda also uses source code from third party libraries. Full details on which libraries are used and the terms under which they are licensed can be found in the [third party notices document](THIRD_PARTY_NOTICES.md).
