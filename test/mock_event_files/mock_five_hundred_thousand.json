@@ -1,0 +1,32 @@
+{
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "awsRegion": "us-east-1",
+      "eventTime": "2020-08-09T01:45:52.132Z",
+      "eventName": "ObjectCreated:CompleteMultipartUpload",
+      "userIdentity": { "principalId": "AWS:AROAXYJ6HBEZIFVN5HSRV:whill" },
+      "requestParameters": { "sourceIPAddress": "76.103.232.3" },
+      "responseElements": {
+        "x-amz-request-id": "76792238745A5B61",
+        "x-amz-id-2": "Kjv4ONQG/KO2pM+eRlhLG4uNPWsumy3V6jzkZ28rsoyjmA8Vy/r3ckkRZMWDJmTnhJgpVpRo1D074gaiuAzjm4CGnudIIXNS"
+      },
+      "s3": {
+        "s3SchemaVersion": "1.0",
+        "configurationId": "321bea21-eb0c-4dea-8171-3d28ea4d56de",
+        "bucket": {
+          "name": "s3-nr-log-test-bucket",
+          "ownerIdentity": { "principalId": "A22LWSDQ4Q8CRV" },
+          "arn": "arn:aws:s3:::s3-nr-log-test-bucket"
+        },
+        "object": {
+          "key": "logs_test_five_hundred_thousand.log.gz",
+          "size": 77495489,
+          "eTag": "2504026215eb6a3e5e2ac7b6197fc98d-5",
+          "sequencer": "005F2F54D11278BDFD"
+        }
+      }
+    }
+  ]
+}

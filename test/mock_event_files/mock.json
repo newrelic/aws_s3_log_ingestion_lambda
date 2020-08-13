@@ -1,0 +1,32 @@
+{
+    "Records": [
+      {
+        "eventVersion": "2.1",
+        "eventSource": "aws:s3",
+        "awsRegion": "us-east-1",
+        "eventTime": "2020-06-01T23:22:52.961Z",
+        "eventName": "ObjectCreated:Put",
+        "userIdentity": { "principalId": "AWS:AROAXYJ6HBEZIFVN5HSRV:whill" },
+        "requestParameters": { "sourceIPAddress": "4.15.128.42" },
+        "responseElements": {
+          "x-amz-request-id": "E7EDAAF3BD50BEB7",
+          "x-amz-id-2": "sn9NVTCAEJjiTP677g6vJbFlK/03p3tkAfmrqsb8gagsjWTZpjMQAaMJGnZ+otEpQfs0mxjZy56UWQUDQiCxxqjD12qTIyRZ"
+        },
+        "s3": {
+          "s3SchemaVersion": "1.0",
+          "configurationId": "aws-s3-log-ingestion-lambda-dev-s3_log_ingest-758603f3cf4909ceaac15fb8b0fde414",
+          "bucket": {
+            "name": "s3-nr-log-test-bucket",
+            "ownerIdentity": { "principalId": "A22LWSDQ4Q8CRV" },
+            "arn": "arn:aws:s3:::s3-nr-log-test-bucket"
+          },
+          "object": {
+            "key": "cloudflare-test-data.json.gz",
+            "size": 2783,
+            "eTag": "84801b22b2ad4050f2a1abce18291900",
+            "sequencer": "005ED58DCE7518A940"
+          }
+        }
+      }
+    ]
+  }

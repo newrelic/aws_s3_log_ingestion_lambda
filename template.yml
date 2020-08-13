@@ -10,6 +10,10 @@ Parameters:
     Type: String
     Description: Your New Relic logtype. You may omit it when deploying the function.
     Default: ""
+  DebugEnabled:
+    Type: String
+    Description: A boolean to determine if you want to output debug messages in the CloudWatch console
+    Default: "false"
 
 Metadata:
   AWS::ServerlessRepo::Application:
@@ -21,22 +25,24 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['newrelic', 'logs', 'logging', 'ingestion', 'lambda', 's3']
     HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
-    SemanticVersion: 1.0.5
+    SemanticVersion: 1.1.0
     SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
 
 Resources:
   NewRelicLogIngestionFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      Runtime: python3.7
+      Runtime: python3.8
       CodeUri: src/
       Handler: handler.lambda_handler
       FunctionName: NewRelic-s3-log-ingestion
       Timeout: 900
+      MemorySize: 256
       Environment:
         Variables: 
           LICENSE_KEY: !Ref NRLicenseKey
           LOG_TYPE: !Ref NRLogType
+          DEBUG_ENABLED: !Ref DebugEnabled
       Policies:
         - Version: '2012-10-17'
           Statement:
