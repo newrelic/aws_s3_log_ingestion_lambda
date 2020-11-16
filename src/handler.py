@@ -58,7 +58,7 @@ def _get_log_type(log_type=None):
     """
     if log_type:
         return log_type
-    return os.getenv("LOG_TYPE", "")
+    return os.getenv("LOG_TYPE") or os.getenv("LOGTYPE", "")
 
 def _debug_logging_enabled():
     """
