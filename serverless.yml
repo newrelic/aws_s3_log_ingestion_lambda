@@ -22,7 +22,7 @@ service: ${env:SERVICE_NAME}
 
 provider:
   name: aws
-  runtime: python3.7
+  runtime: python3.8
   iamRoleStatements:
     - Effect: "Allow"
       Action:
@@ -42,6 +42,7 @@ functions:
     environment: 
       LICENSE_KEY: ${env:LICENSE_KEY}
       LOG_TYPE: ${env:LOG_TYPE}
+      DEBUG_ENABLED: ${env:DEBUG_ENABLED}
     events:
       - s3:
           bucket: ${env:S3_BUCKET_NAME}

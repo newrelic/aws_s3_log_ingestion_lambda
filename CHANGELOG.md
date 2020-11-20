@@ -1,3 +1,4 @@
+- updated to last release 1.1.1
 - updated semantic version
 - updated urls and lables
 - Removed unnecessary statement
