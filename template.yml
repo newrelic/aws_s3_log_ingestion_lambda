@@ -1,11 +1,14 @@
+---
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Sends log data from S3 to New Relic Logging.
+
 Parameters:
   NRLicenseKey:
     Type: String
     Description: Your New Relic license key. Required to send logs to New Relic Logging.
     Default: "YOUR_LICENSE_KEY"
+    NoEcho: true
   NRLogType:
     Type: String
     Description: Your New Relic logtype. You may omit it when deploying the function.
