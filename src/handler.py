@@ -221,7 +221,6 @@ async def _fetch_data_from_s3(bucket, key, context):
                     cloudtrail_events=json.loads(log)["Records"]
                     for this_event in cloudtrail_events:
                         # Convert the eventTime to Posix time and pass it to New Relic as a timestamp attribute
-                        logger.info(this_event)
                         this_event['timestamp']=time.mktime((parser.parse(this_event['eventTime'])).timetuple())
                     log_batches.extend(cloudtrail_events)
                 else:
