@@ -43,6 +43,7 @@ functions:
       LICENSE_KEY: ${env:LICENSE_KEY}
       LOG_TYPE: ${env:LOG_TYPE}
       DEBUG_ENABLED: ${env:DEBUG_ENABLED}
+      ADDITIONAL_ATTRIBUTES: ${env:ADDITIONAL_ATTRIBUTES}
     events:
       - s3:
           bucket: ${env:S3_BUCKET_NAME}

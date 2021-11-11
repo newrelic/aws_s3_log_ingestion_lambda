@@ -51,6 +51,21 @@ class BadRequestException(Exception):
     pass
 
 
+def _get_additional_attributes(additional_attributes=None):
+    """
+    This function gets Environment variable 'ADDITIONAL_ATTRIBUTES' and parses the  same as a json object. Defaults
+    to an empty map.
+    :param `additional_attributes` : Returns the parameter value if present :raises
+    json.JSONDecodeError : If the os environment variable 'ADDITIONAL_ATTRIBUTES' is not a valid json object. :raises
+    TypeError : If the os environment variable 'ADDITIONAL_ATTRIBUTES' is not of type (str, bytes or bytearray)
+    :return: Map of attributes to add to payload
+    """
+    if additional_attributes:
+        return additional_attributes
+    attributes = os.getenv("ADDITIONAL_ATTRIBUTES", "{}")
+    return json.loads(attributes)
+
+
 def _get_license_key(license_key=None):
     """
     This functions gets New Relic's license key from env vars.
@@ -114,16 +129,20 @@ def _package_log_payload(data):
 
     for line in logLines:
         log_messages.append({'message': line})
+    attributes = {
+        "plugin": LOGGING_PLUGIN_METADATA,
+        "aws": {
+            "invoked_function_arn": data["context"]["invoked_function_arn"],
+            "s3_bucket_name": data["context"]["s3_bucket_name"],
+            "s3_key": data["context"]["s3_key"]},
+        "logtype": _get_log_type()
+    }
+    additional_attributes = _get_additional_attributes()
     packaged_payload = [
         {
             "common": {
-                "attributes": {
-                    "plugin": LOGGING_PLUGIN_METADATA,
-                    "aws": {
-                        "invoked_function_arn": data["context"]["invoked_function_arn"],
-                        "s3_bucket_name": data["context"]["s3_bucket_name"]},
-                    "logtype": _get_log_type()
-                }},
+                "attributes": {**attributes, **additional_attributes}
+            },
             "logs": log_messages,
         }]
     return packaged_payload
@@ -205,7 +224,8 @@ async def _fetch_data_from_s3(bucket, key, context):
 
     s3MetaData = {
         "invoked_function_arn": context.invoked_function_arn,
-        "s3_bucket_name": bucket
+        "s3_bucket_name": bucket,
+        "s3_key": key
     }
     log_file_url = "s3://{}/{}".format(bucket, key)
     async with aiohttp.ClientSession() as session:

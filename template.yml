@@ -14,6 +14,10 @@ Parameters:
     Type: String
     Description: A boolean to determine if you want to output debug messages in the CloudWatch console
     Default: "false"
+  AdditionalTags:
+    Type: String
+    Description: A string containing json object(string,string). These attributes will be added to New Relic payload.
+    Default: "{}"
 
 Metadata:
   AWS::ServerlessRepo::Application:
@@ -43,6 +47,7 @@ Resources:
           LICENSE_KEY: !Ref NRLicenseKey
           LOG_TYPE: !Ref NRLogType
           DEBUG_ENABLED: !Ref DebugEnabled
+          ADDITIONAL_ATTRIBUTES: !Ref AdditionalTags
       Policies:
         - Version: '2012-10-17'
           Statement:
