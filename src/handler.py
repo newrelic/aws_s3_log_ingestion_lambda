@@ -25,6 +25,38 @@ LOGGING_PLUGIN_METADATA = {
     'version': LOGGING_LAMBDA_VERSION
 }
 
+
+class InvalidArgumentException(Exception):
+    pass
+
+
+def _format_error(e, text):
+    return "{}. {}".format(e, text)
+
+
+def _get_additional_attributes(attributes=None):
+    """
+    This function gets Environment variable 'ADDITIONAL_ATTRIBUTES' and parses the  same as a json object. Defaults
+    to an empty map.
+    :param `additional_attributes` : Returns the parameter value if present
+    :raises
+        InvalidArgumentException : If the os environment variable 'ADDITIONAL_ATTRIBUTES' is not a valid json object or
+        If the os environment variable 'ADDITIONAL_ATTRIBUTES' is not of type (str, bytes or bytearray).
+    :return: Dict of attributes (key,value) to add to payload
+    """
+    if attributes:
+        return attributes
+    env_attributes = os.getenv("ADDITIONAL_ATTRIBUTES", "{}")
+    try:
+        return json.loads(env_attributes)
+    except json.JSONDecodeError as e:
+        raise InvalidArgumentException(_format_error(e, "Invalid Json object"))
+    except TypeError as e:
+        raise InvalidArgumentException(_format_error(e, "The type of object should be one of the following (str, "
+                                                        "bytes or bytearray)"))
+
+
+additional_attributes = _get_additional_attributes()
 # Maximum number of retries
 MAX_RETRIES = 5
 # Initial backoff (in seconds) between retries
@@ -49,21 +81,6 @@ class MaxRetriesException(Exception):
 
 class BadRequestException(Exception):
     pass
-
-
-def _get_additional_attributes(additional_attributes=None):
-    """
-    This function gets Environment variable 'ADDITIONAL_ATTRIBUTES' and parses the  same as a json object. Defaults
-    to an empty map.
-    :param `additional_attributes` : Returns the parameter value if present :raises
-    json.JSONDecodeError : If the os environment variable 'ADDITIONAL_ATTRIBUTES' is not a valid json object. :raises
-    TypeError : If the os environment variable 'ADDITIONAL_ATTRIBUTES' is not of type (str, bytes or bytearray)
-    :return: Map of attributes to add to payload
-    """
-    if additional_attributes:
-        return additional_attributes
-    attributes = os.getenv("ADDITIONAL_ATTRIBUTES", "{}")
-    return json.loads(attributes)
 
 
 def _get_license_key(license_key=None):
@@ -137,7 +154,6 @@ def _package_log_payload(data):
             "s3_key": data["context"]["s3_key"]},
         "logtype": _get_log_type()
     }
-    additional_attributes = _get_additional_attributes()
     packaged_payload = [
         {
             "common": {
@@ -157,8 +173,6 @@ def create_request(payload, ingest_url=None, license_key=None):
 
 
 async def send_log(session, url, data, headers):
-    def _format_error(e, text):
-        return "{}. {}".format(e, text)
     global completed_requests
     backoff = INITIAL_BACKOFF
     retries = 0
