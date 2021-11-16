@@ -11,7 +11,6 @@ import time
 import logging
 from smart_open import open
 import re
-from pympler import asizeof
 from dateutil import parser
 
 
@@ -19,7 +18,7 @@ logger = logging.getLogger()
 
 US_LOGGING_INGEST_HOST = "https://log-api.newrelic.com/log/v1"
 EU_LOGGING_INGEST_HOST = 'https://log-api.eu.newrelic.com/log/v1'
-LOGGING_LAMBDA_VERSION = '1.1.1'
+LOGGING_LAMBDA_VERSION = '1.1.2'
 LOGGING_PLUGIN_METADATA = {
     'type': "s3-lambda",
     'version': LOGGING_LAMBDA_VERSION
@@ -212,22 +211,25 @@ async def _fetch_data_from_s3(bucket, key, context):
         log_batches = []
         batch_request = []
         batch_counter = 1
+        log_batch_size = 0
         start = time.time()
-        isCloudTrail = bool(re.search(".*CloudTrail.*\.json.gz$", key))
+        isCloudTrail = bool(re.search(".*CloudTrail.*\.json.gz$", key))        
         with open(log_file_url, encoding='utf-8') as log_lines:
+            if isCloudTrail:
+                # This is a CloudTrail log - we need to apply special preprocessing
+                cloudtrail_events=json.loads(log_lines.read())["Records"]
+                for this_event in cloudtrail_events:
+                    # Convert the eventTime to Posix time and pass it to New Relic as a timestamp attribute
+                    this_event['timestamp']=time.mktime((parser.parse(this_event['eventTime'])).timetuple())                    
+                log_lines = cloudtrail_events
+
             for index, log in enumerate(log_lines):
-                if isCloudTrail:
-                    # This is a CloudTrail log - we need to apply special preprocessing
-                    cloudtrail_events=json.loads(log)["Records"]
-                    for this_event in cloudtrail_events:
-                        # Convert the eventTime to Posix time and pass it to New Relic as a timestamp attribute
-                        this_event['timestamp']=time.mktime((parser.parse(this_event['eventTime'])).timetuple())
-                    log_batches.extend(cloudtrail_events)
-                else:
-                    if index % 500 == 0:
-                        logger.debug(f"index: {index}")
-                    log_batches.append(log)
-                if asizeof.asizeof(log_batches) > (MAX_BATCH_SIZE * BATCH_SIZE_FACTOR):
+                log_batch_size += sys.getsizeof(log)
+                if index % 500 == 0:
+                    logger.debug(f"index: {index}")
+                    logger.debug(f"log_batch_size: {log_batch_size}")                    
+                log_batches.append(log)
+                if log_batch_size > (MAX_BATCH_SIZE * BATCH_SIZE_FACTOR):
                     logger.debug(f"sending batch: {batch_counter}")
                     data = {"context": s3MetaData, "entry": log_batches}
                     batch_request.append(create_log_payload_request(data, session))
@@ -235,6 +237,7 @@ async def _fetch_data_from_s3(bucket, key, context):
                         await asyncio.gather(*batch_request)
                         batch_request = []
                     log_batches = []
+                    log_batch_size = 0
                     batch_counter += 1
         data = {"context": s3MetaData, "entry": log_batches}
         batch_request.append(create_log_payload_request(data, session))
