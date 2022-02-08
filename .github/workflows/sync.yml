@@ -1,16 +1,21 @@
-name: Sync Fork
-
-on:
+name: Scheduled Merge Remote Action
+on: 
   schedule:
-    - cron: '0 1 1 * *' # every month
-  workflow_dispatch: # on button click
+    - cron: '0 0 * * 1'
+    # scheduled for 00:00 every Monday
 
 jobs:
-  sync:
+  merge-upstream:
     runs-on: ubuntu-latest
-    steps:
-      - uses: tgymnich/fork-sync@v1.4
+    steps: 
+      - name: Checkout
+        uses: actions/checkout@v2
         with:
-          owner: framer
-          base: master
-          head: master
+          ref: master             # set the branch to merge to
+          fetch-depth: 0 
+      - name: Merge Upstream
+        uses: exions/merge-upstream@v1
+        with:
+          upstream: newrelic/aws_s3_log_ingestion_lambda
+          upstream-branch: master
+          branch: master
