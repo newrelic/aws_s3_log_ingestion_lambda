@@ -18,12 +18,10 @@ from dateutil import parser
 logger = logging.getLogger()
 
 US_LOGGING_INGEST_HOST = "https://log-api.newrelic.com/log/v1"
-EU_LOGGING_INGEST_HOST = 'https://log-api.eu.newrelic.com/log/v1'
-LOGGING_LAMBDA_VERSION = '1.1.1'
-LOGGING_PLUGIN_METADATA = {
-    'type': "s3-lambda",
-    'version': LOGGING_LAMBDA_VERSION
-}
+EU_LOGGING_INGEST_HOST = "https://log-api.eu.newrelic.com/log/v1"
+LOGGING_LAMBDA_VERSION = "1.1.1"
+LOGGING_PLUGIN_METADATA = {"type": "s3-lambda", "version": LOGGING_LAMBDA_VERSION}
+
 
 # Maximum number of retries
 MAX_RETRIES = 5
@@ -105,6 +103,24 @@ def _compress_payload(data):
     return payload
 
 
+def _get_newrelic_tags(payload):
+    """
+    This functions gets New Relic's tags from env vars and adds it to the payload
+    A tag is a key value pair. Multiple tags can be specified.
+    Key and value are colon delimited. Multiple key value pairs are semi-colon delimited.
+    e.g. env:prod;team:myTeam
+    """
+    nr_tags_str = os.getenv("NR_TAGS", "")
+    nr_delimiter = os.getenv("NR_ENV_DELIMITER", ";")
+    if nr_tags_str:
+        nr_tags = dict(
+            item.split(":")
+            for item in nr_tags_str.split(nr_delimiter)
+            if not item.startswith(tuple(["aws:", "plugin:"]))
+        )
+        payload[0]["common"]["attributes"].update(nr_tags)
+
+
 def _package_log_payload(data):
     """
     Packages up a MELT request for log messages
@@ -113,7 +129,7 @@ def _package_log_payload(data):
     log_messages = []
 
     for line in logLines:
-        log_messages.append({'message': line})
+        log_messages.append({"message": line})
     packaged_payload = [
         {
             "common": {
@@ -121,11 +137,17 @@ def _package_log_payload(data):
                     "plugin": LOGGING_PLUGIN_METADATA,
                     "aws": {
                         "invoked_function_arn": data["context"]["invoked_function_arn"],
-                        "s3_bucket_name": data["context"]["s3_bucket_name"]},
-                    "logtype": _get_log_type()
-                }},
+                        "s3_bucket_name": data["context"]["s3_bucket_name"],
+                    },
+                    "logtype": _get_log_type(),
+                }
+            },
             "logs": log_messages,
-        }]
+        }
+    ]
+
+    _get_newrelic_tags(packaged_payload)
+
     return packaged_payload
 
 
@@ -140,6 +162,7 @@ def create_request(payload, ingest_url=None, license_key=None):
 async def send_log(session, url, data, headers):
     def _format_error(e, text):
         return "{}. {}".format(e, text)
+
     global completed_requests
     backoff = INITIAL_BACKOFF
     retries = 0
@@ -159,23 +182,19 @@ async def send_log(session, url, data, headers):
             return resp.status, resp.url
         except aiohttp.ClientResponseError as e:
             if e.status == 400:
-                raise BadRequestException(
-                    _format_error(e, "Unexpected payload"))
+                raise BadRequestException(_format_error(e, "Unexpected payload"))
             elif e.status == 403:
-                raise BadRequestException(
-                    _format_error(e, "Review your license key"))
+                raise BadRequestException(_format_error(e, "Review your license key"))
             elif e.status == 404:
                 raise BadRequestException(
                     _format_error(e, "Review the region endpoint")
                 )
             elif e.status == 429:
-                logger.error(
-                    f"There was a {e.status} error. Reason: {e.message}")
+                logger.error(f"There was a {e.status} error. Reason: {e.message}")
                 # Now retry the request
                 continue
             elif e.status == 408:
-                logger.error(
-                    f"There was a {e.status} error. Reason: {e.message}")
+                logger.error(f"There was a {e.status} error. Reason: {e.message}")
                 # Now retry the request
                 continue
             elif 400 <= e.status < 500:
@@ -193,19 +212,19 @@ def create_log_payload_request(data, session):
 
 async def _fetch_data_from_s3(bucket, key, context):
     """
-        Stream data from S3 bucket. Create batches of size MAX_PAYLOAD_SIZE
-        and create async requests from batches
+    Stream data from S3 bucket. Create batches of size MAX_PAYLOAD_SIZE
+    and create async requests from batches
     """
-    log_file_size = boto3.resource('s3').Bucket(
-        bucket).Object(key).content_length
+    log_file_size = boto3.resource("s3").Bucket(bucket).Object(key).content_length
     if log_file_size > MAX_FILE_SIZE:
         logger.error(
-            "The log file uploaded to S3 is larger than the supported max size of 400MB")
+            "The log file uploaded to S3 is larger than the supported max size of 400MB"
+        )
         return
 
     s3MetaData = {
         "invoked_function_arn": context.invoked_function_arn,
-        "s3_bucket_name": bucket
+        "s3_bucket_name": bucket,
     }
     log_file_url = "s3://{}/{}".format(bucket, key)
     async with aiohttp.ClientSession() as session:
@@ -214,14 +233,16 @@ async def _fetch_data_from_s3(bucket, key, context):
         batch_counter = 1
         start = time.time()
         isCloudTrail = bool(re.search(".*CloudTrail.*\.json.gz$", key))
-        with open(log_file_url, encoding='utf-8') as log_lines:
+        with open(log_file_url, encoding="utf-8") as log_lines:
             for index, log in enumerate(log_lines):
                 if isCloudTrail:
                     # This is a CloudTrail log - we need to apply special preprocessing
-                    cloudtrail_events=json.loads(log)["Records"]
+                    cloudtrail_events = json.loads(log)["Records"]
                     for this_event in cloudtrail_events:
                         # Convert the eventTime to Posix time and pass it to New Relic as a timestamp attribute
-                        this_event['timestamp']=time.mktime((parser.parse(this_event['eventTime'])).timetuple())
+                        this_event["timestamp"] = time.mktime(
+                            (parser.parse(this_event["eventTime"])).timetuple()
+                        )
                     log_batches.extend(cloudtrail_events)
                 else:
                     if index % 500 == 0:
@@ -248,23 +269,25 @@ async def _fetch_data_from_s3(bucket, key, context):
 #  Lambda handler  #
 ####################
 
+
 def lambda_handler(event, context):
     # Get bucket from s3 upload event
     _setting_console_logging_level()
-    bucket = event['Records'][0]['s3']['bucket']['name']
+    bucket = event["Records"][0]["s3"]["bucket"]["name"]
     key = urllib.parse.unquote_plus(
-        event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+        event["Records"][0]["s3"]["object"]["key"], encoding="utf-8"
+    )
     try:
         asyncio.run(_fetch_data_from_s3(bucket, key, context))
     except KeyError as e:
         logger.error(e)
         logger.error(
-            f'Error getting object {key} from bucket {bucket}. Make sure they exist and your bucket is in the same region as this function.')
+            f"Error getting object {key} from bucket {bucket}. Make sure they exist and your bucket is in the same region as this function."
+        )
         raise e
     except OSError as e:
         logger.error(e)
-        logger.error(
-            f"Error processing the object {key} from bucket {bucket}.")
+        logger.error(f"Error processing the object {key} from bucket {bucket}.")
         raise e
     except MaxRetriesException as e:
         logger.error("Retry limit reached. Failed to send log entry.")
@@ -276,8 +299,8 @@ def lambda_handler(event, context):
         logger.error(f"Error occurred: {e}")
         raise e
     else:
-        return {'statusCode': 200, 'message': 'Uploaded logs to New Relic'}
+        return {"statusCode": 200, "message": "Uploaded logs to New Relic"}
 
 
 if __name__ == "__main__":
-    lambda_handler('', '')
+    lambda_handler("", "")
