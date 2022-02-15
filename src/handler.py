@@ -271,7 +271,7 @@ def get_s3_event(event):
     if "s3" in record:
         return record["s3"]
 
-    if "sns" in record:
+    if "Sns" in record:
         sns_message = record["Sns"]["message"]
         s3_event = json.loads(sns_message)
         return s3_event["Records"][0]["s3"]
