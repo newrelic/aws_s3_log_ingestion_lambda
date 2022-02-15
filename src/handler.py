@@ -265,6 +265,18 @@ async def _fetch_data_from_s3(bucket, key, context):
         logger.debug(f"time elapsed to send to NR Logs: {end - start}")
 
 
+def get_s3_event(event):
+    record = event["Records"][0]
+
+    if "s3" in record:
+        return record["s3"]
+
+    if "sns" in record:
+        sns_message = record["Sns"]["message"]
+        s3_event = json.loads(sns_message)
+        return s3_event["Records"][0]["s3"]
+
+
 ####################
 #  Lambda handler  #
 ####################
@@ -273,21 +285,22 @@ async def _fetch_data_from_s3(bucket, key, context):
 def lambda_handler(event, context):
     # Get bucket from s3 upload event
     _setting_console_logging_level()
-    bucket = event["Records"][0]["s3"]["bucket"]["name"]
-    key = urllib.parse.unquote_plus(
-        event["Records"][0]["s3"]["object"]["key"], encoding="utf-8"
-    )
+    s3_event = get_s3_event(event)
+    bucket_name = s3_event["bucket"]["name"]
+    object_key = urllib.parse.unquote_plus(s3_event["object"]["key"], encoding="utf-8")
     try:
-        asyncio.run(_fetch_data_from_s3(bucket, key, context))
+        asyncio.run(_fetch_data_from_s3(bucket_name, object_key, context))
     except KeyError as e:
         logger.error(e)
         logger.error(
-            f"Error getting object {key} from bucket {bucket}. Make sure they exist and your bucket is in the same region as this function."
+            f"Error getting object {object_key} from bucket {bucket_name}. Make sure they exist and your bucket is in the same region as this function."
         )
         raise e
     except OSError as e:
         logger.error(e)
-        logger.error(f"Error processing the object {key} from bucket {bucket}.")
+        logger.error(
+            f"Error processing the object {object_key} from bucket {bucket_name}."
+        )
         raise e
     except MaxRetriesException as e:
         logger.error("Retry limit reached. Failed to send log entry.")
