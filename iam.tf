@@ -19,7 +19,6 @@ POLICY
 }
 
 
-
 resource "aws_lambda_permission" "allow_bucket" {
   statement_id  = "AllowExecutionFromS3Bucket"
   action        = "lambda:InvokeFunction"
@@ -50,10 +49,20 @@ resource "aws_iam_policy" "bucket_policy" {
   })
 }
 
+data "aws_iam_policy" "AWSLambdaBasicExecutionRole" {
+  arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 resource "aws_iam_role_policy_attachment" "watched_bucket_policy" {
   role       = aws_iam_role.lambda.name
   policy_arn = aws_iam_policy.bucket_policy.arn
 }
+
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution_role" {
+  role       = aws_iam_role.lambda.name
+  policy_arn = data.aws_iam_policy.AWSLambdaBasicExecutionRole.arn
+}
+
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = var.bucket_name
