@@ -1,12 +1,17 @@
 #!/bin/bash
 
 export WRKDIR=$(pwd)
-export LYR_PDS_DIR="layers-python38-requirements"
+export LAYER_FIRST="layer-python38-requirements"
+export LAYER_SECOND="layer-python38-requirements-other"
         
 mkdir -p packages/
         
-# Building Python-pandas layer
-cd ${WRKDIR}/${LYR_PDS_DIR}/
-${WRKDIR}/${LYR_PDS_DIR}/build_layer.sh
-zip -r ${WRKDIR}/packages/python38-requirements.zip .
-rm -rf ${WRKDIR}/${LYR_PDS_DIR}/python/
+cd ${WRKDIR}/${LAYER_FIRST}/
+${WRKDIR}/${LAYER_FIRST}/build_layer.sh
+zip -r ${WRKDIR}/packages/python38-requirements-first.zip .
+rm -rf ${WRKDIR}/${LAYER_FIRST}/python/
+
+cd ${WRKDIR}/${LAYER_SECOND}/
+${WRKDIR}/${LAYER_FIRST}/build_layer.sh
+zip -r ${WRKDIR}/packages/python38-requirements-second.zip .
+rm -rf ${WRKDIR}/${LAYER_FIRST}/python/
