@@ -12,6 +12,7 @@ resource "aws_lambda_function" "newrelic_s3_log_ingestion_lambda" {
   runtime          = "python3.8"
   memory_size      = 128
   role             = aws_iam_role.lambda.arn
+  timeout          = 300
   layers = [
     "${aws_lambda_layer_version.python38_ingestion_layer.arn}",
   ]
