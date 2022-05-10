@@ -1,5 +1,4 @@
 import json
-import sys
 import urllib.parse
 import boto3
 import gzip
@@ -239,7 +238,7 @@ async def _fetch_data_from_s3(bucket, key, context):
         data = {"context": s3MetaData, "entry": log_batches}
         batch_request.append(create_log_payload_request(data, session))
         logger.info("Sending data to NR logs.....")
-        output = await asyncio.gather(*batch_request)
+        await asyncio.gather(*batch_request)
         end = time.time()
         logger.debug(f"time elapsed to send to NR Logs: {end - start}")
 
