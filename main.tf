@@ -13,8 +13,7 @@ resource "aws_lambda_function" "newrelic_s3_log_ingestion_lambda" {
   memory_size      = 128
   role             = aws_iam_role.lambda.arn
   layers = [
-    "${aws_lambda_layer_version.python38_ingestion_layer_first.arn}",
-    "${aws_lambda_layer_version.python38_ingestion_layer_second.arn}",
+    "${aws_lambda_layer_version.python38_ingestion_layer.arn}",
   ]
   environment {
     variables = {
@@ -26,17 +25,9 @@ resource "aws_lambda_function" "newrelic_s3_log_ingestion_lambda" {
 }
 
 
-resource "aws_lambda_layer_version" "python38_ingestion_layer_first" {
-  filename            = "${path.module}/packages/python38-requirements-first.zip"
+resource "aws_lambda_layer_version" "python38_ingestion_layer" {
+  filename            = "${path.module}/packages/python38-requirements.zip"
   layer_name          = "Python38-requirements-first"
-  source_code_hash    = filebase64sha256("${path.module}/packages/python38-requirements-first.zip")
-  compatible_runtimes = ["python3.8", ]
-}
-
-
-resource "aws_lambda_layer_version" "python38_ingestion_layer_second" {
-  filename            = "${path.module}/packages/python38-requirements-second.zip"
-  layer_name          = "Python38-requirements-second"
-  source_code_hash    = filebase64sha256("${path.module}/packages/python38-requirements-second.zip")
+  source_code_hash    = filebase64sha256("${path.module}/packages/python38-requirements.zip")
   compatible_runtimes = ["python3.8", ]
 }

@@ -8,10 +8,5 @@ mkdir -p packages/
         
 cd ${WRKDIR}/${LAYER_FIRST}/
 ${WRKDIR}/${LAYER_FIRST}/build_layer.sh
-zip -r ${WRKDIR}/packages/python38-requirements-first.zip .
-rm -rf ${WRKDIR}/${LAYER_FIRST}/python/
-
-cd ${WRKDIR}/${LAYER_SECOND}/
-${WRKDIR}/${LAYER_FIRST}/build_layer.sh
-zip -r ${WRKDIR}/packages/python38-requirements-second.zip .
+zip -r ${WRKDIR}/packages/python38-requirements.zip .
 rm -rf ${WRKDIR}/${LAYER_FIRST}/python/
