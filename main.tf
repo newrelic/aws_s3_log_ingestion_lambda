@@ -24,7 +24,7 @@ resource "aws_lambda_function" "newrelic_s3_log_ingestion_lambda" {
 
 
 resource "aws_lambda_layer_version" "python38_ingestion_lambda" {
-  filename            = "${path.module}/src/python38-requirements.zip"
+  filename            = "${path.module}/packages/python38-requirements.zip"
   layer_name          = "Python38-requirements"
   source_code_hash    = filebase64sha256("${path.module}/packages/python38-requirements.zip")
   compatible_runtimes = ["python3.8", ]
