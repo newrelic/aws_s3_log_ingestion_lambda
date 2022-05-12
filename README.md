@@ -12,13 +12,25 @@ To forward data to New Relic you need access to a [New Relic License Key](https:
 
 To install and configure the New Relic S3 log shipper Lambda, [see our documentation](https://docs.newrelic.com/docs/logs/enable-new-relic-logs/1-enable-logs/aws-lambda-sending-logs-s3).
 
+
+## Working with terraform
+
 You can also use it as a module in terraform:
 ```
 
-
-
+module "newrelic_s3_log_ingestion" {
+  source        = "git@github.com:unhaggle/aws_s3_log_ingestion_lambda.git?ref=terraform_support"
+  project_name  = var.project_name
+  environment   = local.environment
+  license_key   = data.aws_ssm_parameter.newrelic_license_key.value
+  debug_enabled = "false"
+  bucket_name   = aws_s3_bucket.lb_logs.id
+  bucket_arn    = aws_s3_bucket.lb_logs.arn
+}
 
 ```
+
+If there are any changes required regarding lambda packages, please update layer-python38-requirements and then rebuild using `build.sh`
 
 ## Support
 
