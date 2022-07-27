@@ -36,6 +36,7 @@ MAX_INDIVIDUAL_LOG_SIZE = 250 * 1024
 MAX_FILE_SIZE = 400 * 1000 * 1024
 # Max batch size for sending requests (1MB)
 MAX_BATCH_SIZE = 1000 * 1024
+BATCH_SIZE_FACTOR = 1.5
 
 REQUEST_BATCH_SIZE = 25
 
@@ -83,7 +84,7 @@ def _get_batch_size_factor(batch_size_factor=None):
     """
     if batch_size_factor:
         return batch_size_factor
-    return _convert_float(os.getenv("BATCH_SIZE_FACTOR", "1.5"))
+    return _convert_float(os.getenv("BATCH_SIZE_FACTOR", BATCH_SIZE_FACTOR))
 
 def _get_license_key(license_key=None):
     """
