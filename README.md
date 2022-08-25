@@ -22,5 +22,11 @@ Contributions to improve s3-log-ingestion-lambda are encouraged! Keep in mind wh
 
 To execute our corporate CLA, which is required if your contribution is on behalf of a company, or if you have any questions, please drop us an email at opensource@newrelic.com.
 
+## Developers
+
+For more information about how to contribute from the developer point of view,
+we recommend you to take a look to the [DEVELOPER.md](./DEVELOPER.md) that 
+contains most of the info you'll need.
+
 ## License
 `s3-log-ingestion-lambda` is licensed under the [Apache 2.0](http://apache.org/licenses/LICENSE-2.0.txt) License. The s3-log-ingestion-lambda also uses source code from third party libraries. Full details on which libraries are used and the terms under which they are licensed can be found in the third party notices docume
