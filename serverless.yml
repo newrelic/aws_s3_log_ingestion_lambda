@@ -26,12 +26,12 @@ provider:
   iamRoleStatements:
     - Effect: "Allow"
       Action:
-       - "s3:GetObject"
+        - "s3:GetObject"
       Resource: "arn:aws:s3:::${env:S3_BUCKET_NAME}/*"
 
 plugins:
   - serverless-python-requirements
-  
+
 custom:
   pythonRequirements:
     dockerizePip: non-linux
@@ -39,10 +39,14 @@ custom:
 functions:
   NewRelic-s3-log-ingestion:
     handler: src/handler.lambda_handler
-    environment: 
+    environment:
       LICENSE_KEY: ${env:LICENSE_KEY}
       LOG_TYPE: ${env:LOG_TYPE}
       DEBUG_ENABLED: ${env:DEBUG_ENABLED}
+      S3_CLOUDTRAIL_LOG_PATTERN: ${env:S3_CLOUDTRAIL_LOG_PATTERN}
+      S3_IGNORE_PATTERN: ${env:S3_IGNORE_PATTERN}
+      BATCH_SIZE_FACTOR: ${env:BATCH_SIZE_FACTOR}
+
     events:
       - s3:
           bucket: ${env:S3_BUCKET_NAME}

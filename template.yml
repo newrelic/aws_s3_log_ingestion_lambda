@@ -1,6 +1,31 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Sends log data from S3 to New Relic Logging.
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: NewRelic-log-ingestion-s3
+    Description: Send log data from a S3 bucket to New Relic Logging.
+    Author: New Relic
+    SpdxLicenseId: Apache-2.0
+    LicenseUrl: LICENSE
+    ReadmeUrl: README.md
+    Labels: ['newrelic', 'logs', 'logging', 'ingestion', 'lambda', 's3']
+    HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
+    SemanticVersion: 1.1.3
+    SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
+
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Deployment Settings"
+        Parameters: 
+          - NRLicenseKey
+          - FunctionRole          
+          - PermissionsBoundary    
+          - NRLogType
+          - DebugEnabled
+      
 Parameters:
   NRLicenseKey:
     Type: String
@@ -14,23 +39,27 @@ Parameters:
     Type: String
     Description: A boolean to determine if you want to output debug messages in the CloudWatch console
     Default: "false"
+  FunctionRole:
+    Type: String
+    Description: |
+      (Optional) The ARN of an IAM role to use as this function's execution role. Should provide the AWSLambdaBasicExecutionRole policy. 
+      If not specified, an appropriate Role will be created, which will require CAPABILITY_IAM to be acknowledged.
+    Default: ''        
+  PermissionsBoundary:
+    Type: String
+    Description: |
+     (Optional) The ARN of a permissions boundary to use for this function's execution role. This property works only if the role is generated for you. 
+    Default: ''
 
-Metadata:
-  AWS::ServerlessRepo::Application:
-    Name: NewRelic-log-ingestion-s3
-    Description: Send log data from a S3 bucket to New Relic Logging.
-    Author: New Relic
-    SpdxLicenseId: Apache-2.0
-    LicenseUrl: LICENSE
-    ReadmeUrl: README.md
-    Labels: ['newrelic', 'logs', 'logging', 'ingestion', 'lambda', 's3']
-    HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
-    SemanticVersion: 1.1.1
-    SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
+Conditions:
+  NoRole: !Equals ['', !Ref FunctionRole]
+  NoCap: !Not [ !Equals ['', !Ref FunctionRole] ]
+  HasPermissionBoundary: !Not [ !Equals ['', !Ref PermissionsBoundary] ]
 
 Resources:
-  NewRelicLogIngestionFunction:
+  NewRelicLogIngestion:
     Type: 'AWS::Serverless::Function'
+    Condition: NoCap    
     Properties:
       Runtime: python3.8
       CodeUri: src/
@@ -43,6 +72,40 @@ Resources:
           LICENSE_KEY: !Ref NRLicenseKey
           LOG_TYPE: !Ref NRLogType
           DEBUG_ENABLED: !Ref DebugEnabled
+      PermissionsBoundary: !If [ HasPermissionBoundary, !Ref PermissionsBoundary, !Ref AWS::NoValue ]
+      Role: !Ref FunctionRole         
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:GetObject'
+              Resource: 'arn:aws:s3:::*'
+      Events:
+        BucketEvent1:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: SourceLogBucket
+            Events:
+              - 's3:ObjectCreated:*'
+
+  NewRelicLogIngestionFunction:
+    Type: 'AWS::Serverless::Function'
+    Condition: NoRole    
+    Properties:
+      Runtime: python3.8
+      CodeUri: src/
+      Handler: handler.lambda_handler
+      FunctionName: NewRelic-s3-log-ingestion
+      Timeout: 900
+      MemorySize: 256
+      Environment:
+        Variables:
+          LICENSE_KEY: !Ref NRLicenseKey
+          LOG_TYPE: !Ref NRLogType
+          DEBUG_ENABLED: !Ref DebugEnabled
+      PermissionsBoundary: !If [ HasPermissionBoundary, !Ref PermissionsBoundary, !Ref AWS::NoValue ]          
       Policies:
         - Version: '2012-10-17'
           Statement:
