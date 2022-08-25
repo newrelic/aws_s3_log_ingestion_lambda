@@ -11,7 +11,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['newrelic', 'logs', 'logging', 'ingestion', 'lambda', 's3']
     HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
-    SemanticVersion: 1.1.4
+    SemanticVersion: 1.1.5
     SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
 
   AWS::CloudFormation::Interface: 
@@ -76,6 +76,7 @@ Resources:
           LICENSE_KEY: !Ref NRLicenseKey
           LOG_TYPE: !Ref NRLogType
           DEBUG_ENABLED: !Ref DebugEnabled
+          ADDITIONAL_ATTRIBUTES: !Ref AdditionalTags
       PermissionsBoundary: !If [ HasPermissionBoundary, !Ref PermissionsBoundary, !Ref AWS::NoValue ]
       Role: !Ref FunctionRole         
       Policies:
