@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: Sends log data from S3 to New Relic Logging.
 Metadata:
   AWS::ServerlessRepo::Application:
-    Name: NewRelic-log-ingestion-s3-RPB
+    Name: NewRelic-log-ingestion-s3
     Description: Send log data from a S3 bucket to New Relic Logging.
     Author: New Relic
     SpdxLicenseId: Apache-2.0
@@ -11,7 +11,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['newrelic', 'logs', 'logging', 'ingestion', 'lambda', 's3']
     HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
-    SemanticVersion: 1.1.10
+    SemanticVersion: 1.1.3
     SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
 
   AWS::CloudFormation::Interface: 
@@ -55,7 +55,6 @@ Conditions:
   NoRole: !Equals ['', !Ref FunctionRole]
   NoCap: !Not [ !Equals ['', !Ref FunctionRole] ]
   HasPermissionBoundary: !Not [ !Equals ['', !Ref PermissionsBoundary] ]
-
 
 Resources:
   NewRelicLogIngestion:
