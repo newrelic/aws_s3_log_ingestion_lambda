@@ -28,3 +28,5 @@ packaged.yml
 .aws-sam/
 #VS Code
 .vscode/
+#JetBrains
+.idea
