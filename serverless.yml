@@ -46,7 +46,8 @@ functions:
       S3_CLOUDTRAIL_LOG_PATTERN: ${env:S3_CLOUDTRAIL_LOG_PATTERN}
       S3_IGNORE_PATTERN: ${env:S3_IGNORE_PATTERN}
       BATCH_SIZE_FACTOR: ${env:BATCH_SIZE_FACTOR}
-
+      ADDITIONAL_ATTRIBUTES: ${env:ADDITIONAL_ATTRIBUTES}
+      
     events:
       - s3:
           bucket: ${env:S3_BUCKET_NAME}

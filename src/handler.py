@@ -18,12 +18,49 @@ logger = logging.getLogger()
 
 US_LOGGING_INGEST_HOST = "https://log-api.newrelic.com/log/v1"
 EU_LOGGING_INGEST_HOST = 'https://log-api.eu.newrelic.com/log/v1'
-LOGGING_LAMBDA_VERSION = '1.1.4'
+LOGGING_LAMBDA_VERSION = '1.1.5'
 LOGGING_PLUGIN_METADATA = {
     'type': "s3-lambda",
     'version': LOGGING_LAMBDA_VERSION
 }
 
+
+class InvalidArgumentException(Exception):
+    pass
+
+
+def _format_error(e, text):
+    return "{}. {}".format(e, text)
+
+def _get_optional_env(key, default):
+    """
+    Returns the default value even if the environment variable is set but empty
+    """
+    return os.getenv(key, default) or default
+
+def _get_additional_attributes(attributes=None):
+    """
+    This function gets Environment variable 'ADDITIONAL_ATTRIBUTES' and parses the  same as a json object. Defaults
+    to an empty map.
+    :param `additional_attributes` : Returns the parameter value if present
+    :raises
+        InvalidArgumentException : If the os environment variable 'ADDITIONAL_ATTRIBUTES' is not a valid json object or
+        If the os environment variable 'ADDITIONAL_ATTRIBUTES' is not of type (str, bytes or bytearray).
+    :return: Dict of attributes (key,value) to add to payload
+    """
+    if attributes:
+        return attributes
+    env_attributes = _get_optional_env("ADDITIONAL_ATTRIBUTES", "{}")
+    try:
+        return json.loads(env_attributes)
+    except json.JSONDecodeError as e:
+        raise InvalidArgumentException(_format_error(e, "Invalid Json object"))
+    except TypeError as e:
+        raise InvalidArgumentException(_format_error(e, "The type of object should be one of the following (str, "
+                                                        "bytes or bytearray)"))
+
+
+additional_attributes = _get_additional_attributes()
 # Maximum number of retries
 MAX_RETRIES = 5
 # Initial backoff (in seconds) between retries
@@ -56,7 +93,7 @@ def _is_ignore_log_file(key=None, regex_pattern=None):
     This functions checks whether this log file should be ignored based on regex pattern.
     """
     if not regex_pattern:
-        regex_pattern = os.getenv("S3_IGNORE_PATTERN", "$^")
+        regex_pattern = _get_optional_env("S3_IGNORE_PATTERN", "$^")
 
     return bool(re.search(regex_pattern, key))
 
@@ -66,7 +103,7 @@ def _isCloudTrail(key=None, regex_pattern=None):
     This functions checks whether this log file is a CloudTrail log based on regex pattern.
     """
     if not regex_pattern:
-        regex_pattern = os.getenv(
+        regex_pattern = _get_optional_env(
             "S3_CLOUDTRAIL_LOG_PATTERN", ".*CloudTrail.*\.json.gz$")
 
     return bool(re.search(regex_pattern, key))
@@ -84,7 +121,7 @@ def _get_batch_size_factor(batch_size_factor=None):
     """
     if batch_size_factor:
         return batch_size_factor
-    return _convert_float(os.getenv("BATCH_SIZE_FACTOR", BATCH_SIZE_FACTOR))
+    return _convert_float(_get_optional_env("BATCH_SIZE_FACTOR", BATCH_SIZE_FACTOR))
 
 def _get_license_key(license_key=None):
     """
@@ -92,14 +129,14 @@ def _get_license_key(license_key=None):
     """
     if license_key:
         return license_key
-    return os.getenv("LICENSE_KEY", "")
+    return _get_optional_env("LICENSE_KEY", "")
 
 
 def _get_log_type(log_type=None):
     """
     This functions gets the New Relic logtype from env vars.
     """
-    return log_type or os.getenv("LOG_TYPE") or os.getenv("LOGTYPE", "")
+    return log_type or _get_optional_env("LOG_TYPE", "")
 
 
 def _setting_console_logging_level():
@@ -107,7 +144,7 @@ def _setting_console_logging_level():
     Determines whether or not debug logging should be enabled based on the env var.
     Defaults to false.
     """
-    if os.getenv("DEBUG_ENABLED", "false").lower() == "true":
+    if _get_optional_env("DEBUG_ENABLED", "false").lower() == "true":
         print("enabling debug mode")
         logger.setLevel(logging.DEBUG)
     else:
@@ -151,16 +188,19 @@ def _package_log_payload(data):
 
     for line in logLines:
         log_messages.append({'message': line})
+    attributes = {
+        "plugin": LOGGING_PLUGIN_METADATA,
+        "aws": {
+            "invoked_function_arn": data["context"]["invoked_function_arn"],
+            "s3_bucket_name": data["context"]["s3_bucket_name"],
+            "s3_key": data["context"]["s3_key"]},
+        "logtype": _get_log_type()
+    }
     packaged_payload = [
         {
             "common": {
-                "attributes": {
-                    "plugin": LOGGING_PLUGIN_METADATA,
-                    "aws": {
-                        "invoked_function_arn": data["context"]["invoked_function_arn"],
-                        "s3_bucket_name": data["context"]["s3_bucket_name"]},
-                    "logtype": _get_log_type()
-                }},
+                "attributes": {**attributes, **additional_attributes}
+            },
             "logs": log_messages,
         }]
     return packaged_payload
@@ -175,8 +215,6 @@ def create_request(payload, ingest_url=None, license_key=None):
 
 
 async def send_log(session, url, data, headers):
-    def _format_error(e, text):
-        return "{}. {}".format(e, text)
     global completed_requests
     backoff = INITIAL_BACKOFF
     retries = 0
@@ -242,7 +280,8 @@ async def _fetch_data_from_s3(bucket, key, context):
     BATCH_SIZE_FACTOR = _get_batch_size_factor()
     s3MetaData = {
         "invoked_function_arn": context.invoked_function_arn,
-        "s3_bucket_name": bucket
+        "s3_bucket_name": bucket,
+        "s3_key": key
     }
     log_file_url = "s3://{}/{}".format(bucket, key)
     async with aiohttp.ClientSession() as session:
