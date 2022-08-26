@@ -32,6 +32,11 @@ class InvalidArgumentException(Exception):
 def _format_error(e, text):
     return "{}. {}".format(e, text)
 
+def _get_optional_env(key, default):
+    """
+    Returns the default value even if the environment variable is set but empty
+    """
+    return os.getenv(key, default) or default
 
 def _get_additional_attributes(attributes=None):
     """
@@ -45,7 +50,7 @@ def _get_additional_attributes(attributes=None):
     """
     if attributes:
         return attributes
-    env_attributes = os.getenv("ADDITIONAL_ATTRIBUTES", "{}")
+    env_attributes = _get_optional_env("ADDITIONAL_ATTRIBUTES", "{}")
     try:
         return json.loads(env_attributes)
     except json.JSONDecodeError as e:
@@ -88,7 +93,7 @@ def _is_ignore_log_file(key=None, regex_pattern=None):
     This functions checks whether this log file should be ignored based on regex pattern.
     """
     if not regex_pattern:
-        regex_pattern = os.getenv("S3_IGNORE_PATTERN", "$^")
+        regex_pattern = _get_optional_env("S3_IGNORE_PATTERN", "$^")
 
     return bool(re.search(regex_pattern, key))
 
@@ -98,7 +103,7 @@ def _isCloudTrail(key=None, regex_pattern=None):
     This functions checks whether this log file is a CloudTrail log based on regex pattern.
     """
     if not regex_pattern:
-        regex_pattern = os.getenv(
+        regex_pattern = _get_optional_env(
             "S3_CLOUDTRAIL_LOG_PATTERN", ".*CloudTrail.*\.json.gz$")
 
     return bool(re.search(regex_pattern, key))
@@ -116,7 +121,7 @@ def _get_batch_size_factor(batch_size_factor=None):
     """
     if batch_size_factor:
         return batch_size_factor
-    return _convert_float(os.getenv("BATCH_SIZE_FACTOR", BATCH_SIZE_FACTOR))
+    return _convert_float(_get_optional_env("BATCH_SIZE_FACTOR", BATCH_SIZE_FACTOR))
 
 def _get_license_key(license_key=None):
     """
@@ -124,14 +129,14 @@ def _get_license_key(license_key=None):
     """
     if license_key:
         return license_key
-    return os.getenv("LICENSE_KEY", "")
+    return _get_optional_env("LICENSE_KEY", "")
 
 
 def _get_log_type(log_type=None):
     """
     This functions gets the New Relic logtype from env vars.
     """
-    return log_type or os.getenv("LOG_TYPE") or os.getenv("LOGTYPE", "")
+    return log_type or _get_optional_env("LOG_TYPE", "")
 
 
 def _setting_console_logging_level():
@@ -139,7 +144,7 @@ def _setting_console_logging_level():
     Determines whether or not debug logging should be enabled based on the env var.
     Defaults to false.
     """
-    if os.getenv("DEBUG_ENABLED", "false").lower() == "true":
+    if _get_optional_env("DEBUG_ENABLED", "false").lower() == "true":
         print("enabling debug mode")
         logger.setLevel(logging.DEBUG)
     else:

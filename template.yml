@@ -39,21 +39,33 @@ Parameters:
     Type: String
     Description: A boolean to determine if you want to output debug messages in the CloudWatch console
     Default: "false"
-  AdditionalTags:
+  AdditionalAttributes:
     Type: String
-    Description: A string containing json object(string,string). These attributes will be added to New Relic payload.
-    Default: "{}"
+    Description: "(Optional) A string containing json object(string,string). These attributes will be added to New Relic payload."
+    Default: ""
+  S3CloudTrailLogPattern:
+    Type: String
+    Description: "(Optional) Regex pattern to check if the file is from CloudTrail"
+    Default: ""
+  S3IgnorePattern:
+    Type: String
+    Description: "(Optional) Regex pattern to ignore files"
+    Default: ""
+  BatchSizeFactor:
+    Type: String
+    Description: "(Optional) Indicates the expected compression factor of your logs. Used to check if logs could be sent to the API (that is limited to 1Mb of compressed data)"
+    Default: ""
   FunctionRole:
     Type: String
     Description: |
       (Optional) The ARN of an IAM role to use as this function's execution role. Should provide the AWSLambdaBasicExecutionRole policy. 
       If not specified, an appropriate Role will be created, which will require CAPABILITY_IAM to be acknowledged.
-    Default: ''        
+    Default: ""
   PermissionsBoundary:
     Type: String
     Description: |
      (Optional) The ARN of a permissions boundary to use for this function's execution role. This property works only if the role is generated for you. 
-    Default: ''
+    Default: ""
 
 Conditions:
   NoRole: !Equals ['', !Ref FunctionRole]
@@ -76,7 +88,10 @@ Resources:
           LICENSE_KEY: !Ref NRLicenseKey
           LOG_TYPE: !Ref NRLogType
           DEBUG_ENABLED: !Ref DebugEnabled
-          ADDITIONAL_ATTRIBUTES: !Ref AdditionalTags
+          S3_CLOUD_TRAIL_LOG_PATTERN: !Ref S3CloudTrailLogPattern
+          S3_IGNORE_PATTERN: !Ref S3IgnorePattern
+          BATCH_SIZE_FACTOR: !Ref BatchSizeFactor
+          ADDITIONAL_ATTRIBUTES: !Ref AdditionalAttributes
       PermissionsBoundary: !If [ HasPermissionBoundary, !Ref PermissionsBoundary, !Ref AWS::NoValue ]
       Role: !Ref FunctionRole         
       Policies:
@@ -110,7 +125,10 @@ Resources:
           LICENSE_KEY: !Ref NRLicenseKey
           LOG_TYPE: !Ref NRLogType
           DEBUG_ENABLED: !Ref DebugEnabled
-          ADDITIONAL_ATTRIBUTES: !Ref AdditionalTags
+          S3_CLOUD_TRAIL_LOG_PATTERN: !Ref S3CloudTrailLogPattern
+          S3_IGNORE_PATTERN: !Ref S3IgnorePattern
+          BATCH_SIZE_FACTOR: !Ref BatchSizeFactor
+          ADDITIONAL_ATTRIBUTES: !Ref AdditionalAttributes
       PermissionsBoundary: !If [ HasPermissionBoundary, !Ref PermissionsBoundary, !Ref AWS::NoValue ]          
       Policies:
         - Version: '2012-10-17'
