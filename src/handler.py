@@ -160,14 +160,12 @@ def _parse(line):
     r'\"([^\"]*)\" \"([^\"]*)\" \"([^ ]*)\" '
     r'\"([^\s]+?)\" \"([^\s]+)\" \"([^ ]*)\" \"([^ ]*)\"'
     )
-    matches = re.match(pattern, line)
     res = {}
+    res["message"] = line
+    matches = re.match(pattern, line)
     if matches:
         for i, field in enumerate(fields): 
             res[field] = matches.group(i+1)
-    else:
-        print("No matches")
-        res["message"] = line
     return res
 
 def _package_log_payload(data):
