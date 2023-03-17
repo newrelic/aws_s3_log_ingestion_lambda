@@ -3,6 +3,7 @@ import urllib.parse
 import boto3
 import gzip
 import os
+import re
 from urllib import request
 import aiohttp
 import asyncio
@@ -103,6 +104,71 @@ def _compress_payload(data):
     payload = gzip.compress(json.dumps(data).encode())
     return payload
 
+def _parse(line):
+    """
+    Parse aws loadbalancer logs.
+    REF: https://docs.aws.amazon.com/athena/latest/ug/application-load-balancer-logs.html#create-alb-table
+    """
+    fields = [
+		"type",
+		"timestamp",
+		"alb",
+		"client_ip",
+		"client_port",
+		"target_ip",
+		"target_port",
+		"request_processing_time",
+		"target_processing_time",
+		"response_processing_time",
+		"alb_status_code",
+		"backend_status_code",
+		"received_bytes",
+		"sent_bytes",
+		"request_verb",
+		"request_url",
+		"request_proto",
+        "user_agent",
+        "user_agent_details",
+		"ssl_cipher",
+		"ssl_protocol",
+		"target_group_arn",
+		"trace_id",
+		"domain_name",
+		"chosen_cert_arn",
+		"matched_rule_priority",
+		"request_creation_time",
+		"actions_executed",
+		"redirect_url",
+        "lambda_error_reason",
+        "target_port_list",
+        "target_status_code_list",
+        "classification",
+        "classification_reason"
+	]
+    pattern = re.compile(
+    r'([^ ]*) ([^ ]*) ([^ ]*) '
+    r'([^ ]*):([0-9]*) ([^ ]*)[:-]([0-9]*) '
+    r'([-.0-9]*) ([-.0-9]*) ([-.0-9]*) '
+    r'(|[-0-9]*) (-|[-0-9]*) '
+    r'([-0-9]*) ([-0-9]*) '
+    r'\"([^ ]*) ([^ ]*) (- |[^ ]*)\" '
+    r'\"([^\"]*) (.*) '  # user agent and user_agent_details works for pypi
+    r'([A-Z0-9-_]+) ([A-Za-z0-9.-]*) '
+    r'([^ ]*) \"([^\"]*)\" \"([^\"]*)\" '
+    r'\"([^\"]*)\" '
+    r'([-.0-9]*) ([^ ]*) '
+    r'\"([^\"]*)\" \"([^\"]*)\" \"([^ ]*)\" '
+    r'\"([^\s]+?)\" \"([^\s]+)\" \"([^ ]*)\" \"([^ ]*)\"'
+    )
+    matches = re.match(pattern, line)
+    res = {}
+    if matches:
+        for i, field in enumerate(fields): 
+            res[field] = matches.group(i+1)
+    else:
+        print("No matches")
+        res["message"] = line
+    return res
 
 def _package_log_payload(data):
     """
@@ -112,7 +178,7 @@ def _package_log_payload(data):
     log_messages = []
 
     for line in logLines:
-        log_messages.append({'message': line})
+        log_messages.append(_parse(line))
     packaged_payload = [
         {
             "common": {
