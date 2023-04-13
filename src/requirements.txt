@@ -1,10 +1,10 @@
-aiohttp==3.7.4
-async-timeout==3.0.1
+aiohttp==3.8.4
+async-timeout==4.0.2
 attrs==19.3.0
 boto==2.49.0
 boto3==1.24.59
 botocore==1.27.59
-certifi==2020.6.20
+certifi==2022.12.7
 chardet==3.0.4
 docutils==0.15.2
 idna==2.10
@@ -16,5 +16,5 @@ s3transfer==0.6.0
 six==1.15.0
 smart-open==2.1.0
 typing-extensions==3.7.4.2
-urllib3==1.26.5
+urllib3==1.26.15
 yarl==1.5.1
