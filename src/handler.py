@@ -1,8 +1,8 @@
 import json
-import sys
+from sys import getsizeof
 import urllib.parse
 import boto3
-import gzip
+from gzip import compress
 import os
 from urllib import request
 import aiohttp
@@ -10,7 +10,7 @@ import asyncio
 import time
 import logging
 from smart_open import open
-import re
+from re import search
 from dateutil import parser
 
 
@@ -95,7 +95,7 @@ def _is_ignore_log_file(key=None, regex_pattern=None):
     if not regex_pattern:
         regex_pattern = _get_optional_env("S3_IGNORE_PATTERN", "$^")
 
-    return bool(re.search(regex_pattern, key))
+    return bool(search(regex_pattern, key))
 
 
 def _isCloudTrail(key=None, regex_pattern=None):
@@ -106,7 +106,7 @@ def _isCloudTrail(key=None, regex_pattern=None):
         regex_pattern = _get_optional_env(
             "S3_CLOUDTRAIL_LOG_PATTERN", ".*CloudTrail.*\.json.gz$")
 
-    return bool(re.search(regex_pattern, key))
+    return bool(search(regex_pattern, key))
 
 def _convert_float(s):
     try:
@@ -173,9 +173,9 @@ def _compress_payload(data):
     This method usually returns a list of one element, but can be bigger if the
     payload size is too big
     """
-    logger.debug(f"uncompressed size: {sys.getsizeof(json.dumps(data).encode())}")
-    payload = gzip.compress(json.dumps(data).encode())
-    logger.debug(f"compressed size: {sys.getsizeof(payload)}")
+    logger.debug(f"uncompressed size: {getsizeof(json.dumps(data).encode())}")
+    payload = compress(json.dumps(data).encode())
+    logger.debug(f"compressed size: {getsizeof(payload)}")
     return payload
 
 
@@ -300,7 +300,7 @@ async def _fetch_data_from_s3(bucket, key, context):
                 log_lines = cloudtrail_events
 
             for index, log in enumerate(log_lines):
-                log_batch_size += sys.getsizeof(str(log))
+                log_batch_size += getsizeof(str(log))
                 if index % 500 == 0:
                     logger.debug(f"index: {index}")
                     logger.debug(f"log_batch_size: {log_batch_size}")
