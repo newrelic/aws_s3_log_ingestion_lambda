@@ -8,10 +8,10 @@
 
 - Avail meaningful `timestamp`
     - In original implementation, `timestamp` is set to the time when Lambda is invoked. With this implementation, `timestamp` is set to the time when log record is generated.
-    - In Lambda, replace date and time each of log record, to timestamp in ISO8601 format
-    - In New Relic, use timestamp in ISO8601 format as `timestamp`
-        - You have to define Log parsing rule in New Relic. Read following [Setup in New Relic](#setup-in-new-relicrequired-for-this-repository) section.
-- `timestamp` format is changed to ISO8601
+    - `date` and `time` attributes are removed.
+- In Lambda, replace date and time each of log record, to timestamp in ISO8601 format
+- In New Relic, use timestamp in ISO8601 format as `timestamp`
+    - You have to define Log parsing rule in New Relic. Read following [Setup in New Relic](#setup-in-new-relicrequired-for-this-repository) section.
 
 ## Requirements
 
@@ -67,6 +67,8 @@ Based on builtin logtype `cloudfront-web`.
 https://docs.newrelic.com/docs/logs/ui-data/built-log-parsing-rules/#cloudfront
 
 From `cloudfront-web`, replace `^%{NOTSPACE:date}%{SPACE}%{NOTSPACE:time}` to `^%{TIMESTAMP_ISO8601:timestamp}`.
+
+Note: Because of the restiction of New Relic parsing rule length, we cannot **append** timestamp. So we have to **replace** these attributes
 
 ## Support
 
