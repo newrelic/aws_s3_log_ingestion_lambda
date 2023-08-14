@@ -10,8 +10,8 @@
     - In original implementation, `timestamp` is set to the time when Lambda is invoked. With this implementation, `timestamp` is set to the time when log record is generated.
     - In Lambda, replace date and time each of log record, to timestamp in ISO8601 format
     - In New Relic, use timestamp in ISO8601 format as `timestamp`
-        - You have to define Log parsing rule in New Relic
-- `timestamp`` format is changed to ISO8601
+        - You have to define Log parsing rule in New Relic. Read following [Setup in New Relic](#setup-in-new-relicrequired-for-this-repository) section.
+- `timestamp` format is changed to ISO8601
 
 ## Requirements
 
