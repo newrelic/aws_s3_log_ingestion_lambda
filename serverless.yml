@@ -31,10 +31,12 @@ provider:
 
 plugins:
   - serverless-python-requirements
+  - serverless-better-credentials
 
 custom:
   pythonRequirements:
     dockerizePip: non-linux
+    fileName: src/requirements.txt
 
 functions:
   NewRelic-s3-log-ingestion:
