@@ -335,7 +335,7 @@ def get_s3_event(event):
                 return sns_msg_dict
         except Exception:
             if logger.isEnabledFor(logging.DEBUG):
-                logger.debug("No s3 event detected from SNS message: {sns_msg}")
+                logger.debug(f"No s3 event detected from SNS message: {sns_msg}")
     raise Exception("Event type not supported")
 
 
