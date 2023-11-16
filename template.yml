@@ -11,7 +11,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['newrelic', 'logs', 'logging', 'ingestion', 'lambda', 's3']
     HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
-    SemanticVersion: 1.1.6
+    SemanticVersion: 1.2.0
     SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
 
   AWS::CloudFormation::Interface: 
@@ -77,7 +77,7 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Condition: NoCap    
     Properties:
-      Runtime: python3.8
+      Runtime: python3.11
       CodeUri: src/
       Handler: handler.lambda_handler
       FunctionName: NewRelic-s3-log-ingestion
@@ -114,7 +114,7 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Condition: NoRole    
     Properties:
-      Runtime: python3.8
+      Runtime: python3.11
       CodeUri: src/
       Handler: handler.lambda_handler
       FunctionName: NewRelic-s3-log-ingestion

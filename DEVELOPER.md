@@ -23,16 +23,16 @@ the [SAM](https://aws.amazon.com/serverless/sam/) way of doing it.
 
 - An AWS S3 bucket where the package will be uploaded
 
+### Deploy
+
+- AWS Account and enough permissions to do the deploy, generated template will
+  need IAM capabilities.
+
 ### Publishing
 
 - For personal publishing is mandatory to update the function name on the
   `template.yml` file to avoid collide with the New Relic official release of
   this application.
-
-### Deploy
-
-- AWS Account and enough permissions to do the deploy, generated template will
-  need IAM capabilities.
 
 ## Building it locally
 
@@ -49,7 +49,7 @@ Then you need to have a "sample" event of a file in an S3 bucket so we can use
 it, we provide a sample one in the test/mock.json but it wouldn't work if you
 haven't access to the given S3 bucket.
 
-Then just run `LICENSE_KEY=<YOUR_NEW_RELIC_LICENSE_KEY> TEST_FILE="./test/mock.json" make run-local` to run it locally.
+Then just run `LICENSE_KEY=<YOUR_NEW_RELIC_LICENSE_KEY> TEST_FILE="./test/mock.json" make run` to run it locally.
 
 ## Packaging
 
