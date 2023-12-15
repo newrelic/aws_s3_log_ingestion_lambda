@@ -126,10 +126,17 @@ def _get_batch_size_factor(batch_size_factor=None):
 def _get_license_key(license_key=None):
     """
     This functions gets New Relic's license key from env vars.
+    If not set in the environment, attempts to load key from an aws
+    secret in secretsmanager
     """
     if license_key:
         return license_key
-    return _get_optional_env("LICENSE_KEY", "")
+    env_key = _get_optional_env("LICENSE_KEY", "")
+    if env_key == "" and (license_key_arn := _get_optional_env("LICENSE_KEY_ARN", None)) is not None:
+        sm = boto3.client("secretsmanager")
+        env_key = json.loads(sm.get_secret_value(SecretId=license_key_arn)["SecretString"])["LicenseKey"]
+
+    return env_key
 
 
 def _get_log_type(log_type=None):
