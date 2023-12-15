@@ -22,7 +22,7 @@ service: ${env:SERVICE_NAME}
 
 provider:
   name: aws
-  runtime: python3.8
+  runtime: python3.11
   iamRoleStatements:
     - Effect: "Allow"
       Action:
