@@ -104,9 +104,15 @@ def _isCloudTrail(key=None, regex_pattern=None):
     """
     if not regex_pattern:
         regex_pattern = _get_optional_env(
-            "S3_CLOUDTRAIL_LOG_PATTERN", ".*CloudTrail.*\.json.gz$")
+            "S3_CLOUD_TRAIL_LOG_PATTERN", ".*_CloudTrail_.*\.json.gz$")
 
     return bool(re.search(regex_pattern, key))
+
+def _isCloudTrailDigest(key=None):
+    """
+    This functions checks whether this log file is a CloudTrail-Digest based on regex pattern.
+    """
+    return bool(re.search(".*_CloudTrail-Digest_.*\.json.gz$", key))
 
 def _convert_float(s):
     try:
@@ -284,6 +290,9 @@ async def _fetch_data_from_s3(bucket, key, context):
         "s3_key": key
     }
     log_file_url = "s3://{}/{}".format(bucket, key)
+    if _isCloudTrailDigest(key):
+        # CloudTrail-Digest will not have any logs in it. Hence, no need to continue further
+        return
     async with aiohttp.ClientSession() as session:
         log_batches = []
         batch_request = []
