@@ -11,7 +11,6 @@ import time
 import logging
 from smart_open import open
 import re
-from pympler import asizeof
 from dateutil import parser
 
 
@@ -19,12 +18,49 @@ logger = logging.getLogger()
 
 US_LOGGING_INGEST_HOST = "https://log-api.newrelic.com/log/v1"
 EU_LOGGING_INGEST_HOST = 'https://log-api.eu.newrelic.com/log/v1'
-LOGGING_LAMBDA_VERSION = '1.1.1'
+LOGGING_LAMBDA_VERSION = '1.2.0'
 LOGGING_PLUGIN_METADATA = {
     'type': "s3-lambda",
     'version': LOGGING_LAMBDA_VERSION
 }
 
+
+class InvalidArgumentException(Exception):
+    pass
+
+
+def _format_error(e, text):
+    return "{}. {}".format(e, text)
+
+def _get_optional_env(key, default):
+    """
+    Returns the default value even if the environment variable is set but empty
+    """
+    return os.getenv(key, default) or default
+
+def _get_additional_attributes(attributes=None):
+    """
+    This function gets Environment variable 'ADDITIONAL_ATTRIBUTES' and parses the  same as a json object. Defaults
+    to an empty map.
+    :param `additional_attributes` : Returns the parameter value if present
+    :raises
+        InvalidArgumentException : If the os environment variable 'ADDITIONAL_ATTRIBUTES' is not a valid json object or
+        If the os environment variable 'ADDITIONAL_ATTRIBUTES' is not of type (str, bytes or bytearray).
+    :return: Dict of attributes (key,value) to add to payload
+    """
+    if attributes:
+        return attributes
+    env_attributes = _get_optional_env("ADDITIONAL_ATTRIBUTES", "{}")
+    try:
+        return json.loads(env_attributes)
+    except json.JSONDecodeError as e:
+        raise InvalidArgumentException(_format_error(e, "Invalid Json object"))
+    except TypeError as e:
+        raise InvalidArgumentException(_format_error(e, "The type of object should be one of the following (str, "
+                                                        "bytes or bytearray)"))
+
+
+additional_attributes = _get_additional_attributes()
 # Maximum number of retries
 MAX_RETRIES = 5
 # Initial backoff (in seconds) between retries
@@ -38,6 +74,7 @@ MAX_FILE_SIZE = 400 * 1000 * 1024
 # Max batch size for sending requests (1MB)
 MAX_BATCH_SIZE = 1000 * 1024
 BATCH_SIZE_FACTOR = 1.5
+
 REQUEST_BATCH_SIZE = 25
 
 completed_requests = 0
@@ -51,20 +88,61 @@ class BadRequestException(Exception):
     pass
 
 
+def _is_ignore_log_file(key=None, regex_pattern=None):
+    """
+    This functions checks whether this log file should be ignored based on regex pattern.
+    """
+    if not regex_pattern:
+        regex_pattern = _get_optional_env("S3_IGNORE_PATTERN", "$^")
+
+    return bool(re.search(regex_pattern, key))
+
+
+def _isCloudTrail(key=None, regex_pattern=None):
+    """
+    This functions checks whether this log file is a CloudTrail log based on regex pattern.
+    """
+    if not regex_pattern:
+        regex_pattern = _get_optional_env(
+            "S3_CLOUD_TRAIL_LOG_PATTERN", ".*_CloudTrail_.*\.json.gz$")
+
+    return bool(re.search(regex_pattern, key))
+
+def _isCloudTrailDigest(key=None):
+    """
+    This functions checks whether this log file is a CloudTrail-Digest based on regex pattern.
+    """
+    return bool(re.search(".*_CloudTrail-Digest_.*\.json.gz$", key))
+
+def _convert_float(s):
+    try:
+        f = float(s)
+    except ValueError:
+        f = 1.5
+    return f
+
+def _get_batch_size_factor(batch_size_factor=None):
+    """
+    This functions gets BATCH_SIZE_FACTOR from env vars.
+    """
+    if batch_size_factor:
+        return batch_size_factor
+    return _convert_float(_get_optional_env("BATCH_SIZE_FACTOR", BATCH_SIZE_FACTOR))
+
 def _get_license_key(license_key=None):
     """
     This functions gets New Relic's license key from env vars.
     """
     if license_key:
         return license_key
-    return os.getenv("LICENSE_KEY", "")
+    return _get_optional_env("LICENSE_KEY", "")
 
 
 def _get_log_type(log_type=None):
     """
     This functions gets the New Relic logtype from env vars.
     """
-    return log_type or os.getenv("LOG_TYPE") or os.getenv("LOGTYPE", "")
+    return log_type or _get_optional_env("LOG_TYPE", "")
 
 
 def _setting_console_logging_level():
@@ -72,7 +150,7 @@ def _setting_console_logging_level():
     Determines whether or not debug logging should be enabled based on the env var.
     Defaults to false.
     """
-    if os.getenv("DEBUG_ENABLED", "false").lower() == "true":
+    if _get_optional_env("DEBUG_ENABLED", "false").lower() == "true":
         print("enabling debug mode")
         logger.setLevel(logging.DEBUG)
     else:
@@ -101,7 +179,9 @@ def _compress_payload(data):
     This method usually returns a list of one element, but can be bigger if the
     payload size is too big
     """
+    logger.debug(f"uncompressed size: {sys.getsizeof(json.dumps(data).encode())}")
     payload = gzip.compress(json.dumps(data).encode())
+    logger.debug(f"compressed size: {sys.getsizeof(payload)}")
     return payload
 
 def _parse(line):
@@ -164,7 +244,7 @@ def _parse(line):
     res["message"] = line
     matches = re.match(pattern, line)
     if matches:
-        for i, field in enumerate(fields): 
+        for i, field in enumerate(fields):
             res[field] = matches.group(i+1)
     return res
 
@@ -177,16 +257,19 @@ def _package_log_payload(data):
 
     for line in logLines:
         log_messages.append(_parse(line))
+    attributes = {
+        "plugin": LOGGING_PLUGIN_METADATA,
+        "aws": {
+            "invoked_function_arn": data["context"]["invoked_function_arn"],
+            "s3_bucket_name": data["context"]["s3_bucket_name"],
+            "s3_key": data["context"]["s3_key"]},
+        "logtype": _get_log_type()
+    }
     packaged_payload = [
         {
             "common": {
-                "attributes": {
-                    "plugin": LOGGING_PLUGIN_METADATA,
-                    "aws": {
-                        "invoked_function_arn": data["context"]["invoked_function_arn"],
-                        "s3_bucket_name": data["context"]["s3_bucket_name"]},
-                    "logtype": _get_log_type()
-                }},
+                "attributes": {**attributes, **additional_attributes}
+            },
             "logs": log_messages,
         }]
     return packaged_payload
@@ -201,8 +284,6 @@ def create_request(payload, ingest_url=None, license_key=None):
 
 
 async def send_log(session, url, data, headers):
-    def _format_error(e, text):
-        return "{}. {}".format(e, text)
     global completed_requests
     backoff = INITIAL_BACKOFF
     retries = 0
@@ -265,39 +346,46 @@ async def _fetch_data_from_s3(bucket, key, context):
         logger.error(
             "The log file uploaded to S3 is larger than the supported max size of 400MB")
         return
-
+    BATCH_SIZE_FACTOR = _get_batch_size_factor()
     s3MetaData = {
         "invoked_function_arn": context.invoked_function_arn,
-        "s3_bucket_name": bucket
+        "s3_bucket_name": bucket,
+        "s3_key": key
     }
     log_file_url = "s3://{}/{}".format(bucket, key)
+    if _isCloudTrailDigest(key):
+        # CloudTrail-Digest will not have any logs in it. Hence, no need to continue further
+        return
     async with aiohttp.ClientSession() as session:
         log_batches = []
         batch_request = []
         batch_counter = 1
+        log_batch_size = 0
         start = time.time()
-        isCloudTrail = bool(re.search(".*CloudTrail.*\.json.gz$", key))
         with open(log_file_url, encoding='utf-8') as log_lines:
+            if _isCloudTrail(key):
+                # This is a CloudTrail log - we need to apply special preprocessing
+                cloudtrail_events=json.loads(log_lines.read())["Records"]
+                for this_event in cloudtrail_events:
+                    # Convert the eventTime to Posix time and pass it to New Relic as a timestamp attribute
+                    this_event['timestamp']=time.mktime((parser.parse(this_event['eventTime'])).timetuple())
+                log_lines = cloudtrail_events
+
             for index, log in enumerate(log_lines):
-                if isCloudTrail:
-                    # This is a CloudTrail log - we need to apply special preprocessing
-                    cloudtrail_events=json.loads(log)["Records"]
-                    for this_event in cloudtrail_events:
-                        # Convert the eventTime to Posix time and pass it to New Relic as a timestamp attribute
-                        this_event['timestamp']=time.mktime((parser.parse(this_event['eventTime'])).timetuple())
-                    log_batches.extend(cloudtrail_events)
-                else:
-                    if index % 500 == 0:
-                        logger.debug(f"index: {index}")
-                    log_batches.append(log)
-                if asizeof.asizeof(log_batches) > (MAX_BATCH_SIZE * BATCH_SIZE_FACTOR):
-                    logger.debug(f"sending batch: {batch_counter}")
+                log_batch_size += sys.getsizeof(str(log))
+                if index % 500 == 0:
+                    logger.debug(f"index: {index}")
+                    logger.debug(f"log_batch_size: {log_batch_size}")
+                log_batches.append(log)
+                if log_batch_size > (MAX_BATCH_SIZE * BATCH_SIZE_FACTOR):
+                    logger.debug(f"sending batch: {batch_counter} log_batch_size: {log_batch_size}")
                     data = {"context": s3MetaData, "entry": log_batches}
                     batch_request.append(create_log_payload_request(data, session))
                     if len(batch_request) >= REQUEST_BATCH_SIZE:
                         await asyncio.gather(*batch_request)
                         batch_request = []
                     log_batches = []
+                    log_batch_size = 0
                     batch_counter += 1
         data = {"context": s3MetaData, "entry": log_batches}
         batch_request.append(create_log_payload_request(data, session))
@@ -317,6 +405,12 @@ def lambda_handler(event, context):
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = urllib.parse.unquote_plus(
         event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+
+    # Allow user to skip log file using regex pattern set in env variable: S3_IGNORE_PATTERN
+    if _is_ignore_log_file(key):
+        logger.debug(f"Ignore log file based on S3_IGNORE_PATTERN: {key}")
+        return {'statusCode': 200, 'message': 'ignored this log'}
+
     try:
         asyncio.run(_fetch_data_from_s3(bucket, key, context))
     except KeyError as e:

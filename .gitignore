@@ -28,6 +28,9 @@ packaged.yml
 .aws-sam/
 #VS Code
 .vscode/
+#JetBrains
+.idea
+
 # Local .terraform directories
 **/.terraform/*
 
