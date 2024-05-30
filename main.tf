@@ -9,12 +9,12 @@ resource "aws_lambda_function" "newrelic_s3_log_ingestion_lambda" {
   filename         = "${path.module}/tmp/lambda.zip"
   source_code_hash = data.archive_file.newrelic_s3_log_ingestion_lambda.output_base64sha256
   handler          = "handler.lambda_handler"
-  runtime          = "python3.8"
+  runtime          = "python3.11"
   memory_size      = 128
   role             = aws_iam_role.lambda.arn
   timeout          = 300
   layers = [
-    "${aws_lambda_layer_version.python38_ingestion_layer.arn}",
+    "${aws_lambda_layer_version.python311_ingestion_layer.arn}",
   ]
   environment {
     variables = {
@@ -25,10 +25,9 @@ resource "aws_lambda_function" "newrelic_s3_log_ingestion_lambda" {
   }
 }
 
-
-resource "aws_lambda_layer_version" "python38_ingestion_layer" {
-  filename            = "${path.module}/packages/python38-requirements.zip"
-  layer_name          = "Python38-requirements-first"
-  source_code_hash    = filebase64sha256("${path.module}/packages/python38-requirements.zip")
-  compatible_runtimes = ["python3.8", ]
+resource "aws_lambda_layer_version" "python311_ingestion_layer" {
+  filename            = "${path.module}/packages/python311-requirements.zip"
+  layer_name          = "Python311-requirements-first"
+  source_code_hash    = filebase64sha256("${path.module}/packages/python311-requirements.zip")
+  compatible_runtimes = ["python3.11", ]
 }
