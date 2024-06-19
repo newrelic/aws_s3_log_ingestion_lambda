@@ -1,0 +1,17 @@
+{
+    "Records": [
+        {
+            "EventSource": "aws:sns",
+            "EventVersion": "1.0",
+            "EventSubscriptionArn": "arn:aws:sns:us-east-1:1234567890:logging-test:aaaaaaa",
+            "Sns": {
+                "Type": "Notification",
+                "MessageId": "1",
+                "TopicArn": "arn:aws:sns:us-east-1:1234567890:logging-test",
+                "Subject": "Amazon S3 Notification",
+                "Message": "{\"Records\":[{\"eventVersion\":\"2.1\",\"eventSource\":\"aws:s3\",\"awsRegion\":\"us-east-1\",\"eventName\":\"ObjectCreated:Put\",\"s3\":{\"s3SchemaVersion\":\"1.0\",\"bucket\":{\"name\":\"s3-nr-log-test-bucket\",\"arn\":\"arn:aws:s3:::s3-nr-log-test-bucket\"},\"object\":{\"key\":\"cloudflare-test-data.json.gz\"}}}]}",
+                "Timestamp": "2023-09-01T19:56:13.299Z"
+            }
+        }
+    ]
+}
