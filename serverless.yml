@@ -37,8 +37,47 @@ custom:
     fileName: ./src/requirements.txt
     dockerizePip: non-linux
 
-functions:
-  NewRelic-s3-log-ingestion:
+resources:
+  Resources:
+    SnsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${env:SNS_TOPIC_NAME}  
+
+    TestBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${env:S3_BUCKET_NAME}
+        NotificationConfiguration:
+          TopicConfigurations:
+            - Event: s3:ObjectCreated:*
+              Topic: !Ref SnsTopic
+            - Event: s3:ObjectRemoved:*
+              Topic: !Ref SnsTopic
+      DependsOn:
+        - BucketToSNSPermission
+
+    BucketToSNSPermission:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        PolicyDocument:
+          Id: MyTopicPolicy
+          Version: '2012-10-17'
+          Statement:
+          - Sid: My-statement-id
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref SnsTopic
+            Condition:
+              ArnLike:
+                aws:SourceArn: arn:aws:s3:*:*:${env:S3_BUCKET_NAME}
+        Topics:
+          - !Ref SnsTopic
+
+# functions:
+  NewRelic-s3-sns-log-ingestion:
     handler: src/handler.lambda_handler
     environment:
       LICENSE_KEY: ${env:LICENSE_KEY}
@@ -48,11 +87,7 @@ functions:
       S3_IGNORE_PATTERN: ${env:S3_IGNORE_PATTERN}
       BATCH_SIZE_FACTOR: ${env:BATCH_SIZE_FACTOR}
       ADDITIONAL_ATTRIBUTES: ${env:ADDITIONAL_ATTRIBUTES}
-      
     events:
-      - s3:
-          bucket: ${env:S3_BUCKET_NAME}
-          event: s3:ObjectCreated:*
-          rules:
-            - prefix: ${env:S3_PREFIX, ""}
-          existing: true
+      - sns:
+          arn: !Ref SnsTopic
+          topicName: ${env:SNS_TOPIC_NAME}  

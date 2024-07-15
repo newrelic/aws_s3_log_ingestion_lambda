@@ -1,16 +1,30 @@
 [![Community Plus header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Plus.png)](https://opensource.newrelic.com/oss-category/#community-plus)
 
-# AWS Lambda for sending logs from S3 to New Relic
+# AWS Lambda for sending logs from S3 to New Relic via SNS (multiple lambda handlers can be ingesting same data)
 
-`s3-log-ingestion-lambda` is an AWS Serverless application that sends log data from an S3 bucket of your choice to New Relic.
+`s3-sns-log-ingestion-lambda` is an AWS Serverless application that sends log data from an S3 bucket of your choice to New Relic via SNS topic.
 
 ## Requirements
 
 To forward data to New Relic you need access to a [New Relic License Key](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/license-key).
+You will also need an existing S3 bucket and existing SNS topic.
 
+You will need to set the following environment variables
+
+`LICENSE_KEY` - New Relic License ingest key
+
+`LOG_TYPE` - Log type to be sent to New Relic
+
+`DEBUG_ENABLED` - Set to `true` to enable debug logging
+
+`SNS_TOPIC_NAME` - SNS topic name to distribute logs messages to multiple lambda 
+handlers
+
+`S3_BUCKET_NAME` - S3 bucket name to read logs from
+ 
 ## Install
 
-To install and configure the New Relic S3 log shipper Lambda, [see our documentation](https://docs.newrelic.com/docs/logs/enable-new-relic-logs/1-enable-logs/aws-lambda-sending-logs-s3).
+To install and configure the New Relic S3/SNS log shipper Lambda, [see our documentation](https://docs.newrelic.com/docs/logs/enable-new-relic-logs/1-enable-logs/aws-lambda-sending-logs-s3).
 
 ## Support
 

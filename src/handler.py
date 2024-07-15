@@ -336,9 +336,11 @@ async def _fetch_data_from_s3(bucket, key, context):
 #  Lambda handler  #
 ####################
 
-def lambda_handler(event, context):
+def lambda_handler(snsEvent, context):
     # Get bucket from s3 upload event
     _setting_console_logging_level()
+    sns_message = snsEvent['Records'][0]['Sns']['Message']
+    event = json.loads(sns_message)
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = urllib.parse.unquote_plus(
         event['Records'][0]['s3']['object']['key'], encoding='utf-8')
