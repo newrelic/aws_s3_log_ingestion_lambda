@@ -38,6 +38,29 @@ def _get_optional_env(key, default):
     """
     return os.getenv(key, default) or default
 
+
+def _get_newrelic_tags(attributes=None):
+    """
+    This functions gets New Relic's tags from env vars and adds it to the payload
+    A tag is a key value pair. Multiple tags can be specified.
+    Key and value are colon delimited. Multiple key value pairs are semi-colon delimited.
+    e.g. env:prod;team:myTeam
+
+    Deprecated: Use the standard `ADDITIONAL_ATTRIBUTES` environment variable instead.
+    """
+    if attributes:
+        return attributes
+    nr_tags_str = os.getenv("NR_TAGS", "")
+    nr_delimiter = os.getenv("NR_ENV_DELIMITER", ";")
+    if nr_tags_str:
+        nr_tags = dict(
+            item.split(":")
+            for item in nr_tags_str.split(nr_delimiter)
+            if not item.startswith(tuple(["aws:", "plugin:"]))
+        )
+        return nr_tags
+
+
 def _get_additional_attributes(attributes=None):
     """
     This function gets Environment variable 'ADDITIONAL_ATTRIBUTES' and parses the  same as a json object. Defaults
@@ -60,7 +83,7 @@ def _get_additional_attributes(attributes=None):
                                                         "bytes or bytearray)"))
 
 
-additional_attributes = _get_additional_attributes()
+additional_attributes = _get_newrelic_tags(_get_additional_attributes())
 # Maximum number of retries
 MAX_RETRIES = 5
 # Initial backoff (in seconds) between retries
@@ -183,24 +206,6 @@ def _compress_payload(data):
     payload = gzip.compress(json.dumps(data).encode())
     logger.debug(f"compressed size: {sys.getsizeof(payload)}")
     return payload
-
-
-def _get_newrelic_tags(payload):
-    """
-    This functions gets New Relic's tags from env vars and adds it to the payload
-    A tag is a key value pair. Multiple tags can be specified.
-    Key and value are colon delimited. Multiple key value pairs are semi-colon delimited.
-    e.g. env:prod;team:myTeam
-    """
-    nr_tags_str = os.getenv("NR_TAGS", "")
-    nr_delimiter = os.getenv("NR_ENV_DELIMITER", ";")
-    if nr_tags_str:
-        nr_tags = dict(
-            item.split(":")
-            for item in nr_tags_str.split(nr_delimiter)
-            if not item.startswith(tuple(["aws:", "plugin:"]))
-        )
-        payload[0]["common"]["attributes"].update(nr_tags)
 
 
 def _package_log_payload(data):
@@ -375,7 +380,7 @@ def lambda_handler(event, context):
     object_key = urllib.parse.unquote_plus(
         s3_event["object"]["key"], encoding="utf-8")
 
-    # Allow user to skip log file using regex pattern set in env variable: S3_IGNORE_PATTERN 
+    # Allow user to skip log file using regex pattern set in env variable: S3_IGNORE_PATTERN
     if _is_ignore_log_file(key):
         logger.debug(f"Ignore log file based on S3_IGNORE_PATTERN: {key}")
         return {'statusCode': 200, 'message': 'ignored this log'}
