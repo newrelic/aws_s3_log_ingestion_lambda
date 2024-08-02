@@ -1,6 +1,31 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Sends log data from S3 to New Relic Logging.
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: NewRelic-log-ingestion-s3
+    Description: Send log data from a S3 bucket to New Relic Logging.
+    Author: New Relic
+    SpdxLicenseId: Apache-2.0
+    LicenseUrl: LICENSE
+    ReadmeUrl: README.md
+    Labels: ['newrelic', 'logs', 'logging', 'ingestion', 'lambda', 's3']
+    HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
+    SemanticVersion: 1.2.0
+    SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
+
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Deployment Settings"
+        Parameters: 
+          - NRLicenseKey
+          - FunctionRole          
+          - PermissionsBoundary    
+          - NRLogType
+          - DebugEnabled
+      
 Parameters:
   NRLicenseKey:
     Type: String
@@ -14,25 +39,45 @@ Parameters:
     Type: String
     Description: A boolean to determine if you want to output debug messages in the CloudWatch console
     Default: "false"
+  AdditionalAttributes:
+    Type: String
+    Description: "(Optional) A string containing json object(string,string). These attributes will be added to New Relic payload."
+    Default: ""
+  S3CloudTrailLogPattern:
+    Type: String
+    Description: "(Optional) Regex pattern to check if the file is from CloudTrail"
+    Default: ""
+  S3IgnorePattern:
+    Type: String
+    Description: "(Optional) Regex pattern to ignore files"
+    Default: ""
+  BatchSizeFactor:
+    Type: String
+    Description: "(Optional) Indicates the expected compression factor of your logs. Used to check if logs could be sent to the API (that is limited to 1Mb of compressed data)"
+    Default: ""
+  FunctionRole:
+    Type: String
+    Description: |
+      (Optional) The ARN of an IAM role to use as this function's execution role. Should provide the AWSLambdaBasicExecutionRole policy. 
+      If not specified, an appropriate Role will be created, which will require CAPABILITY_IAM to be acknowledged.
+    Default: ""
+  PermissionsBoundary:
+    Type: String
+    Description: |
+     (Optional) The ARN of a permissions boundary to use for this function's execution role. This property works only if the role is generated for you. 
+    Default: ""
 
-Metadata:
-  AWS::ServerlessRepo::Application:
-    Name: NewRelic-log-ingestion-s3
-    Description: Send log data from a S3 bucket to New Relic Logging.
-    Author: New Relic
-    SpdxLicenseId: Apache-2.0
-    LicenseUrl: LICENSE
-    ReadmeUrl: README.md
-    Labels: ['newrelic', 'logs', 'logging', 'ingestion', 'lambda', 's3']
-    HomePageUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
-    SemanticVersion: 1.1.1
-    SourceCodeUrl: https://github.com/newrelic/aws_s3_log_ingestion_lambda
+Conditions:
+  NoRole: !Equals ['', !Ref FunctionRole]
+  NoCap: !Not [ !Equals ['', !Ref FunctionRole] ]
+  HasPermissionBoundary: !Not [ !Equals ['', !Ref PermissionsBoundary] ]
 
 Resources:
-  NewRelicLogIngestionFunction:
+  NewRelicLogIngestion:
     Type: 'AWS::Serverless::Function'
+    Condition: NoCap    
     Properties:
-      Runtime: python3.8
+      Runtime: python3.11
       CodeUri: src/
       Handler: handler.lambda_handler
       FunctionName: NewRelic-s3-log-ingestion
@@ -43,6 +88,48 @@ Resources:
           LICENSE_KEY: !Ref NRLicenseKey
           LOG_TYPE: !Ref NRLogType
           DEBUG_ENABLED: !Ref DebugEnabled
+          S3_CLOUD_TRAIL_LOG_PATTERN: !Ref S3CloudTrailLogPattern
+          S3_IGNORE_PATTERN: !Ref S3IgnorePattern
+          BATCH_SIZE_FACTOR: !Ref BatchSizeFactor
+          ADDITIONAL_ATTRIBUTES: !Ref AdditionalAttributes
+      PermissionsBoundary: !If [ HasPermissionBoundary, !Ref PermissionsBoundary, !Ref AWS::NoValue ]
+      Role: !Ref FunctionRole         
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:GetObject'
+              Resource: 'arn:aws:s3:::*'
+      Events:
+        BucketEvent1:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: SourceLogBucket
+            Events:
+              - 's3:ObjectCreated:*'
+
+  NewRelicLogIngestionFunction:
+    Type: 'AWS::Serverless::Function'
+    Condition: NoRole    
+    Properties:
+      Runtime: python3.11
+      CodeUri: src/
+      Handler: handler.lambda_handler
+      FunctionName: NewRelic-s3-log-ingestion
+      Timeout: 900
+      MemorySize: 256
+      Environment:
+        Variables:
+          LICENSE_KEY: !Ref NRLicenseKey
+          LOG_TYPE: !Ref NRLogType
+          DEBUG_ENABLED: !Ref DebugEnabled
+          S3_CLOUD_TRAIL_LOG_PATTERN: !Ref S3CloudTrailLogPattern
+          S3_IGNORE_PATTERN: !Ref S3IgnorePattern
+          BATCH_SIZE_FACTOR: !Ref BatchSizeFactor
+          ADDITIONAL_ATTRIBUTES: !Ref AdditionalAttributes
+      PermissionsBoundary: !If [ HasPermissionBoundary, !Ref PermissionsBoundary, !Ref AWS::NoValue ]          
       Policies:
         - Version: '2012-10-17'
           Statement:
