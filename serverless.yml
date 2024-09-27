@@ -11,18 +11,12 @@
 #
 # Happy Coding!
 
-service: ${env:SERVICE_NAME}
-# app and org for use with dashboard.serverless.com
-#app: your-app-name
-#org: your-org-name
-
-# You can pin your service to only deploy with a specific Serverless version
-# Check out our docs for more details
-# frameworkVersion: "=X.X.X"
+service: ${env:ENVIRONMENT}-s3-to-newrelic
 
 provider:
   name: aws
   runtime: python3.11
+  stage: ${opt:stage, 'log-ingestion'} # the stage gets appended to the service name by default
   iamRoleStatements:
     - Effect: "Allow"
       Action:
@@ -38,8 +32,9 @@ custom:
     dockerizePip: non-linux
 
 functions:
-  NewRelic-s3-log-ingestion:
+  log-ingestion:
     handler: src/handler.lambda_handler
+    name: '${env:ENVIRONMENT}-s3-to-newrelic-log-ingestion'
     environment:
       LICENSE_KEY: ${env:LICENSE_KEY}
       LOG_TYPE: ${env:LOG_TYPE}
