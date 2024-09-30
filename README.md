@@ -1,32 +1,40 @@
-[![Community Plus header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Plus.png)](https://opensource.newrelic.com/oss-category/#community-plus)
-
 # AWS Lambda for sending logs from S3 to New Relic
+This is a forked repository from New Relic's AWS S3 Log Ingestion Lambda.
 
 `s3-log-ingestion-lambda` is an AWS Serverless application that sends log data from an S3 bucket of your choice to New Relic.
 
 ## Requirements
 
-To forward data to New Relic you need access to a [New Relic License Key](https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/license-key).
+Install serverless
+```
+npm install -g serverless
+serverless plugin install -n serverless-python-requirements
+npm install
+```
 
-## Install
+## Package
 
-To install and configure the New Relic S3 log shipper Lambda, [see our documentation](https://docs.newrelic.com/docs/logs/enable-new-relic-logs/1-enable-logs/aws-lambda-sending-logs-s3).
+You need a New Relic license key. Export the following variables with the appropriate environment and bucket name, then package the application:
+```
+export LICENSE_KEY=<LICENSE_KEY>
+export S3_BUCKET_NAME=teachstone-alb-logs-int-red
+export LOG_TYPE=elb
+export DEBUG_ENABLED=true
+export ADDITIONAL_ATTRIBUTES='{"environment": "int"}'
+export ENVIRONMENT="int"
+export S3_CLOUD_TRAIL_LOG_PATTERN=""
+export S3_IGNORE_PATTERN=""
+export BATCH_SIZE_FACTOR=""
+export AWS_PROFILE=
+export S3_PREFIX=
 
-## Support
+# package
+serverless package
+```
 
-New Relic hosts and moderates an online forum where customers can interact with New Relic employees as well as other customers to get help and share best practices. Like all official New Relic open source projects, there's a [related Community topic in the New Relic Explorers Hub](https://discuss.newrelic.com/t/aws-s3-log-ingestion-lambda/104986).
+## Deploy
 
-## Contributing
-
-Contributions to improve s3-log-ingestion-lambda are encouraged! Keep in mind when you submit your pull request, you'll need to sign the CLA via the click-through using CLA-Assistant. You only have to sign the CLA one time per project.
-
-To execute our corporate CLA, which is required if your contribution is on behalf of a company, or if you have any questions, please drop us an email at opensource@newrelic.com.
-
-## Developers
-
-For more information about how to contribute from the developer point of view,
-we recommend you to take a look to the [DEVELOPER.md](./DEVELOPER.md) that 
-contains most of the info you'll need.
-
-## License
-`s3-log-ingestion-lambda` is licensed under the [Apache 2.0](http://apache.org/licenses/LICENSE-2.0.txt) License. The s3-log-ingestion-lambda also uses source code from third party libraries. Full details on which libraries are used and the terms under which they are licensed can be found in the third party notices document
+To deploy, export your AWS credentials and run:
+```
+serverless deploy --region YOUR_AWS_REGION
+```
