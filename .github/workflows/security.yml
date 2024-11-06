@@ -30,6 +30,7 @@ jobs:
           SRCCLR_API_TOKEN: ${{ secrets.AS__VERACODE_AGENT_TOKEN }}
         uses: veracode/veracode-sca@v2.1.12
         with:
+          path: 'src'
           create-issues: false
           allow-dirty: true
 
