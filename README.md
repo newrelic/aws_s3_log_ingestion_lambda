@@ -16,12 +16,12 @@ npm install
 
 You need a New Relic license key. Export the following variables with the appropriate environment and bucket name, then package the application:
 ```
-export LICENSE_KEY=<LICENSE_KEY>
-export S3_BUCKET_NAME=teachstone-alb-logs-int-red
-export LOG_TYPE=elb
+export LICENSE_KEY=<YOUR_NEW_RELIC_LICENSE_KEY>
+export S3_BUCKET_NAME=teachstone-alb-logs-production-red
+export LOG_TYPE=alb
 export DEBUG_ENABLED=true
-export ADDITIONAL_ATTRIBUTES='{"environment": "int"}'
-export ENVIRONMENT="int"
+export ADDITIONAL_ATTRIBUTES='{"environment": "production"}'
+export ENVIRONMENT="production"
 export S3_CLOUD_TRAIL_LOG_PATTERN=""
 export S3_IGNORE_PATTERN=""
 export BATCH_SIZE_FACTOR=""
