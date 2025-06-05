@@ -105,8 +105,7 @@ Resources:
         BucketEvent1:
           Type: S3
           Properties:
-            Bucket:
-              Ref: SourceLogBucket
+            Bucket: !Ref SourceLogBucket
             Events:
               - 's3:ObjectCreated:*'
 
@@ -141,8 +140,7 @@ Resources:
         BucketEvent1:
           Type: S3
           Properties:
-            Bucket:
-              Ref: SourceLogBucket
+            Bucket: !Ref SourceLogBucket
             Events:
               - 's3:ObjectCreated:*'
 

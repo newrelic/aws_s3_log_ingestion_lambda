@@ -22,6 +22,8 @@ venv/
 env.json
 samconfig.toml
 packaged.yml
+package.json
+package-lock.json
 # Serverless directories
 .serverless
 # SAM
