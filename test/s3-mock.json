@@ -3,7 +3,7 @@
     {
       "eventVersion": "2.1",
       "eventSource": "aws:s3",
-      "awsRegion": "us-east-1",
+      "awsRegion": "us-east-2",
       "eventName": "ObjectCreated:Put",
       "s3": {
         "s3SchemaVersion": "1.0",

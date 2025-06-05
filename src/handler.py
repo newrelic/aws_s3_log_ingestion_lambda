@@ -90,7 +90,7 @@ class BadRequestException(Exception):
 
 def _is_ignore_log_file(key=None, regex_pattern=None):
     """
-    This functions checks whether this log file should be ignored based on regex pattern.
+    This function checks whether this log file should be ignored based on regex pattern.
     """
     if not regex_pattern:
         regex_pattern = _get_optional_env("S3_IGNORE_PATTERN", "$^")
@@ -100,7 +100,7 @@ def _is_ignore_log_file(key=None, regex_pattern=None):
 
 def _isCloudTrail(key=None, regex_pattern=None):
     """
-    This functions checks whether this log file is a CloudTrail log based on regex pattern.
+    This function checks whether this log file is a CloudTrail log based on regex pattern.
     """
     if not regex_pattern:
         regex_pattern = _get_optional_env(
@@ -110,7 +110,7 @@ def _isCloudTrail(key=None, regex_pattern=None):
 
 def _isCloudTrailDigest(key=None):
     """
-    This functions checks whether this log file is a CloudTrail-Digest based on regex pattern.
+    This function checks whether this log file is a CloudTrail-Digest based on regex pattern.
     """
     return bool(re.search(".*_CloudTrail-Digest_.*\.json.gz$", key))
 
@@ -123,7 +123,7 @@ def _convert_float(s):
 
 def _get_batch_size_factor(batch_size_factor=None):
     """
-    This functions gets BATCH_SIZE_FACTOR from env vars.
+    This function gets BATCH_SIZE_FACTOR from env vars.
     """
     if batch_size_factor:
         return batch_size_factor
@@ -131,7 +131,7 @@ def _get_batch_size_factor(batch_size_factor=None):
 
 def _get_license_key(license_key=None):
     """
-    This functions gets New Relic's license key from env vars.
+    This function gets New Relic's license key from env vars.
     """
     if license_key:
         return license_key
@@ -140,7 +140,7 @@ def _get_license_key(license_key=None):
 
 def _get_log_type(log_type=None):
     """
-    This functions gets the New Relic logtype from env vars.
+    This function gets the New Relic logtype from env vars.
     """
     return log_type or _get_optional_env("LOG_TYPE", "")
 
@@ -272,6 +272,21 @@ def create_log_payload_request(data, session):
     return send_log(session, req.get_full_url(), req.data, req.headers)
 
 
+def get_s3_event(event):
+    if "s3" in event["Records"][0]:
+        return event
+    elif "Sns" in event["Records"][0]:
+        sns_msg = event["Records"][0]["Sns"]["Message"]
+        try:
+            sns_msg_dict = json.loads(sns_msg)
+            if "Records" in sns_msg_dict and "s3" in sns_msg_dict["Records"][0]:
+                return sns_msg_dict
+        except Exception:
+            if logger.isEnableFor(logging.DEBUG):
+                logger.debug(f"No s3 event detected from SNS message: {sns_msg}")
+        raise Exception("Event type not supported")
+
+
 async def _fetch_data_from_s3(bucket, key, context):
     """
         Stream data from S3 bucket. Create batches of size MAX_PAYLOAD_SIZE
@@ -339,9 +354,11 @@ async def _fetch_data_from_s3(bucket, key, context):
 def lambda_handler(event, context):
     # Get bucket from s3 upload event
     _setting_console_logging_level()
-    bucket = event['Records'][0]['s3']['bucket']['name']
+
+    s3_event = get_s3_event(event)
+    bucket = s3_event['Records'][0]['s3']['bucket']['name']
     key = urllib.parse.unquote_plus(
-        event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+        s3_event['Records'][0]['s3']['object']['key'], encoding='utf-8')
 
     # Allow user to skip log file using regex pattern set in env variable: S3_IGNORE_PATTERN 
     if _is_ignore_log_file(key):
