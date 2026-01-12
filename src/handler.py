@@ -212,6 +212,20 @@ def _package_log_payload(data):
     return packaged_payload
 
 
+def _redact_log_entry(data):
+    """
+    Redacts log entries using a list of find and replace config
+    Expects 'REDACT_CONFIG' to be a list of dictionaries where each dictionary
+    contains a 'find' key specifying some regex to be replaced and a 'replace'
+    key specifying what to replace it with
+    """
+    redact_config = json.loads(os.environ['REDACT_CONFIG'])
+
+    for regex in redact_config:
+        data = re.sub(regex['find'], regex['replace'], data)
+    return data
+
+
 def create_request(payload, ingest_url=None, license_key=None):
     req = request.Request(_get_logging_endpoint(ingest_url), payload)
     req.add_header("X-License-Key", _get_license_key(license_key))
@@ -313,6 +327,8 @@ async def _fetch_data_from_s3(bucket, key, context):
                 if index % 500 == 0:
                     logger.debug(f"index: {index}")
                     logger.debug(f"log_batch_size: {log_batch_size}")
+                if "REDACT_CONFIG" in os.environ:
+                    log = _redact_log_entry(log)
                 log_batches.append(log)
                 if log_batch_size > (MAX_BATCH_SIZE * BATCH_SIZE_FACTOR):
                     logger.debug(f"sending batch: {batch_counter} log_batch_size: {log_batch_size}")
