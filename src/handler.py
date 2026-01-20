@@ -192,15 +192,24 @@ def _package_log_payload(data):
     logLines = data["entry"]
     log_messages = []
 
+    log_type = _get_log_type()
     for line in logLines:
-        log_messages.append({'message': line})
+        if log_type == "cloudfront-web":
+            timestamp_matches = re.match(r"^([\d-]+\s[\d:]+)", line)
+            if timestamp_matches is not None:
+                timestamp = time.mktime((parser.parse(timestamp_matches.group(0))).timetuple())
+            else:
+                timestamp = ""
+            log_messages.append({'message': line, 'timestamp': timestamp })
+        else:
+            log_messages.append({'message': line})
     attributes = {
         "plugin": LOGGING_PLUGIN_METADATA,
         "aws": {
             "invoked_function_arn": data["context"]["invoked_function_arn"],
             "s3_bucket_name": data["context"]["s3_bucket_name"],
             "s3_key": data["context"]["s3_key"]},
-        "logtype": _get_log_type()
+        "logtype": log_type
     }
     packaged_payload = [
         {
