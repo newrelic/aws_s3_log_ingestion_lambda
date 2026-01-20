@@ -313,6 +313,17 @@ async def _fetch_data_from_s3(bucket, key, context):
                 if index % 500 == 0:
                     logger.debug(f"index: {index}")
                     logger.debug(f"log_batch_size: {log_batch_size}")
+                try:
+                    # https://docs.newrelic.com/docs/logs/ui-data/built-log-parsing-rules/#cloudfront
+                    # replace: ^%{NOTSPACE:date}%{SPACE}%{NOTSPACE:time} to ^%{TIMESTAMP_ISO8601:timestamp}
+                    logger.debug(f"log: {log}")
+                    if _get_log_type() and _get_log_type() == "cloudfront-web-timestamp" and not log.startswith("#"):
+                        chunks = str(log).split("\t")
+                        logger.debug(f"chunks: {chunks}")
+                        log = "\t".join(str(s) for s in [f"{chunks[0]}T{chunks[1]}Z", *chunks[2:]])
+                except Exception as e:
+                    logger.debug(e)
+                    pass
                 log_batches.append(log)
                 if log_batch_size > (MAX_BATCH_SIZE * BATCH_SIZE_FACTOR):
                     logger.debug(f"sending batch: {batch_counter} log_batch_size: {log_batch_size}")
