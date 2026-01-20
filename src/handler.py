@@ -332,6 +332,23 @@ async def _fetch_data_from_s3(bucket, key, context):
         logger.debug(f"time elapsed to send to NR Logs: {end - start}")
 
 
+
+def get_s3_event(event):
+    if "s3" in event["Records"][0]:
+        return event
+    elif "Sns" in event["Records"][0]:
+        sns_msg = event["Records"][0]["Sns"]["Message"]
+        try:
+            sns_msg_dict = json.loads(sns_msg)
+            if "Records" in sns_msg_dict and "s3" in sns_msg_dict["Records"][0]:
+                return sns_msg_dict
+        except Exception:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"No s3 event detected from SNS message: {sns_msg}")
+    raise Exception("Event type not supported")
+
+
+
 ####################
 #  Lambda handler  #
 ####################
@@ -339,9 +356,11 @@ async def _fetch_data_from_s3(bucket, key, context):
 def lambda_handler(event, context):
     # Get bucket from s3 upload event
     _setting_console_logging_level()
-    bucket = event['Records'][0]['s3']['bucket']['name']
+    s3_event = get_s3_event(event)
+
+    bucket = s3_event['Records'][0]['s3']['bucket']['name']
     key = urllib.parse.unquote_plus(
-        event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+        s3_event['Records'][0]['s3']['object']['key'], encoding='utf-8')
 
     # Allow user to skip log file using regex pattern set in env variable: S3_IGNORE_PATTERN 
     if _is_ignore_log_file(key):
