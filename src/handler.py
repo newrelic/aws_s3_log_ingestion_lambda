@@ -13,7 +13,6 @@ from smart_open import open
 import re
 from dateutil import parser
 
-
 logger = logging.getLogger()
 
 US_LOGGING_INGEST_HOST = "https://log-api.newrelic.com/log/v1"
@@ -25,10 +24,8 @@ LOGGING_PLUGIN_METADATA = {
     'version': LOGGING_LAMBDA_VERSION
 }
 
-
 class InvalidArgumentException(Exception):
     pass
-
 
 def _format_error(e, text):
     return "{}. {}".format(e, text)
@@ -80,28 +77,24 @@ REQUEST_BATCH_SIZE = 25
 
 completed_requests = 0
 
-
 class MaxRetriesException(Exception):
     pass
-
 
 class BadRequestException(Exception):
     pass
 
-
 def _is_ignore_log_file(key=None, regex_pattern=None):
     """
-    This functions checks whether this log file should be ignored based on regex pattern.
+    This function checks whether this log file should be ignored based on regex pattern.
     """
     if not regex_pattern:
         regex_pattern = _get_optional_env("S3_IGNORE_PATTERN", "$^")
 
     return bool(re.search(regex_pattern, key))
 
-
 def _isCloudTrail(key=None, regex_pattern=None):
     """
-    This functions checks whether this log file is a CloudTrail log based on regex pattern.
+    This function checks whether this log file is a CloudTrail log based on regex pattern.
     """
     if not regex_pattern:
         regex_pattern = _get_optional_env(
@@ -111,7 +104,7 @@ def _isCloudTrail(key=None, regex_pattern=None):
 
 def _isCloudTrailDigest(key=None):
     """
-    This functions checks whether this log file is a CloudTrail-Digest based on regex pattern.
+    This function checks whether this log file is a CloudTrail-Digest based on regex pattern.
     """
     return bool(re.search(".*_CloudTrail-Digest_.*\.json.gz$", key))
 
@@ -124,7 +117,7 @@ def _convert_float(s):
 
 def _get_batch_size_factor(batch_size_factor=None):
     """
-    This functions gets BATCH_SIZE_FACTOR from env vars.
+    This function gets BATCH_SIZE_FACTOR from env vars.
     """
     if batch_size_factor:
         return batch_size_factor
@@ -132,19 +125,17 @@ def _get_batch_size_factor(batch_size_factor=None):
 
 def _get_license_key(license_key=None):
     """
-    This functions gets New Relic's license key from env vars.
+    This function gets New Relic's license key from env vars.
     """
     if license_key:
         return license_key
     return _get_optional_env("LICENSE_KEY", "")
-
 
 def _get_log_type(log_type=None):
     """
     This functions gets the New Relic logtype from env vars.
     """
     return log_type or _get_optional_env("LOG_TYPE", "")
-
 
 def _setting_console_logging_level():
     """
@@ -156,7 +147,6 @@ def _setting_console_logging_level():
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
-
 
 def _get_logging_endpoint(ingest_url=None):
     """
@@ -174,7 +164,6 @@ def _get_logging_endpoint(ingest_url=None):
         return JP_LOGGING_INGEST_HOST
     return US_LOGGING_INGEST_HOST
 
-
 def _compress_payload(data):
     """
     Return a list of payloads to be sent to New Relic.
@@ -185,7 +174,6 @@ def _compress_payload(data):
     payload = gzip.compress(json.dumps(data).encode())
     logger.debug(f"compressed size: {sys.getsizeof(payload)}")
     return payload
-
 
 def _package_log_payload(data):
     """
@@ -213,14 +201,12 @@ def _package_log_payload(data):
         }]
     return packaged_payload
 
-
 def create_request(payload, ingest_url=None, license_key=None):
     req = request.Request(_get_logging_endpoint(ingest_url), payload)
     req.add_header("X-License-Key", _get_license_key(license_key))
     req.add_header("X-Event-Source", "logs")
     req.add_header("Content-Encoding", "gzip")
     return req
-
 
 async def send_log(session, url, data, headers):
     global completed_requests
@@ -266,13 +252,11 @@ async def send_log(session, url, data, headers):
 
     raise MaxRetriesException()
 
-
 def create_log_payload_request(data, session):
     payload = _package_log_payload(data)
     payload = _compress_payload(payload)
     req = create_request(payload)
     return send_log(session, req.get_full_url(), req.data, req.headers)
-
 
 async def _fetch_data_from_s3(bucket, key, context):
     """
@@ -333,7 +317,6 @@ async def _fetch_data_from_s3(bucket, key, context):
         end = time.time()
         logger.debug(f"time elapsed to send to NR Logs: {end - start}")
 
-
 ####################
 #  Lambda handler  #
 ####################
@@ -373,7 +356,6 @@ def lambda_handler(event, context):
         raise e
     else:
         return {'statusCode': 200, 'message': 'Uploaded logs to New Relic'}
-
 
 if __name__ == "__main__":
     lambda_handler('', '')
