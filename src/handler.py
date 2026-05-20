@@ -20,7 +20,8 @@ logger = logging.getLogger()
 
 US_LOGGING_INGEST_HOST = "https://log-api.newrelic.com/log/v1"
 EU_LOGGING_INGEST_HOST = 'https://log-api.eu.newrelic.com/log/v1'
-LOGGING_LAMBDA_VERSION = '1.3.0'
+JP_LOGGING_INGEST_HOST = 'https://log-api.jp.newrelic.com/log/v1'
+LOGGING_LAMBDA_VERSION = '1.4.0'
 LOGGING_PLUGIN_METADATA = {
     'type': "s3-lambda",
     'version': LOGGING_LAMBDA_VERSION
@@ -220,11 +221,12 @@ def _get_logging_endpoint(ingest_url=None):
         return ingest_url
     if "NR_LOGGING_ENDPOINT" in os.environ:
         return os.environ["NR_LOGGING_ENDPOINT"]
-    return (
-        EU_LOGGING_INGEST_HOST
-        if _get_license_key().startswith("eu")
-        else US_LOGGING_INGEST_HOST
-    )
+    license_key = _get_license_key()
+    if license_key.startswith("eu"):
+        return EU_LOGGING_INGEST_HOST
+    elif license_key.startswith("jp"):
+        return JP_LOGGING_INGEST_HOST
+    return US_LOGGING_INGEST_HOST
 
 
 def _compress_payload(data):
