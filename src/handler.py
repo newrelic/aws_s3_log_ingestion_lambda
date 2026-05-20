@@ -3,12 +3,14 @@ import sys
 import urllib.parse
 import boto3
 import gzip
+import io
 import os
 from urllib import request
 import aiohttp
 import asyncio
 import time
 import logging
+import ijson
 from smart_open import open
 import re
 from dateutil import parser
@@ -88,6 +90,58 @@ class BadRequestException(Exception):
     pass
 
 
+class UncompressedSizeLimitExceeded(Exception):
+    pass
+
+
+class _LimitedReader:
+    def __init__(self, raw, max_bytes):
+        self._raw = raw
+        self._max_bytes = max_bytes
+        self._read_bytes = 0
+
+    def read(self, n=-1):
+        remaining = self._max_bytes - self._read_bytes
+        if remaining <= 0:
+            raise UncompressedSizeLimitExceeded(
+                f"Uncompressed data exceeded limit of {self._max_bytes} bytes"
+            )
+
+        if n is None or n < 0:
+            # Avoid unbounded reads; keep it incremental.
+            n = min(64 * 1024, remaining + 1)
+        else:
+            n = min(n, remaining + 1)
+
+        chunk = self._raw.read(n)
+        self._read_bytes += len(chunk)
+        if self._read_bytes > self._max_bytes:
+            raise UncompressedSizeLimitExceeded(
+                f"Uncompressed data exceeded limit of {self._max_bytes} bytes"
+            )
+        return chunk
+
+
+def _iter_cloudtrail_events_streaming(log_file_url):
+    """Stream CloudTrail Records from S3 to avoid OOM.
+
+    CloudTrail objects are typically gzipped JSON with a top-level `Records` array.
+    This iterator yields each record incrementally and enforces MAX_FILE_SIZE as an
+    uncompressed byte limit.
+    """
+    with open(log_file_url, "rb") as raw_stream:
+        buffered = io.BufferedReader(raw_stream)
+        header = buffered.peek(2)[:2]
+
+        if header == b"\x1f\x8b":
+            with gzip.GzipFile(fileobj=buffered) as decompressed:
+                limited = _LimitedReader(decompressed, MAX_FILE_SIZE)
+                yield from ijson.items(limited, "Records.item")
+        else:
+            limited = _LimitedReader(buffered, MAX_FILE_SIZE)
+            yield from ijson.items(limited, "Records.item")
+
+
 def _is_ignore_log_file(key=None, regex_pattern=None):
     """
     This functions checks whether this log file should be ignored based on regex pattern.
@@ -104,7 +158,7 @@ def _isCloudTrail(key=None, regex_pattern=None):
     """
     if not regex_pattern:
         regex_pattern = _get_optional_env(
-            "S3_CLOUD_TRAIL_LOG_PATTERN", ".*_CloudTrail_.*\.json.gz$")
+            "S3_CLOUD_TRAIL_LOG_PATTERN", r".*_CloudTrail_.*\.json.gz$")
 
     return bool(re.search(regex_pattern, key))
 
@@ -112,7 +166,7 @@ def _isCloudTrailDigest(key=None):
     """
     This functions checks whether this log file is a CloudTrail-Digest based on regex pattern.
     """
-    return bool(re.search(".*_CloudTrail-Digest_.*\.json.gz$", key))
+    return bool(re.search(r".*_CloudTrail-Digest_.*\.json.gz$", key))
 
 def _convert_float(s):
     try:
@@ -299,31 +353,56 @@ async def _fetch_data_from_s3(bucket, key, context):
         batch_counter = 1
         log_batch_size = 0
         start = time.time()
-        with open(log_file_url, encoding='utf-8') as log_lines:
-            if _isCloudTrail(key):
-                # This is a CloudTrail log - we need to apply special preprocessing
-                cloudtrail_events=json.loads(log_lines.read())["Records"]
-                for this_event in cloudtrail_events:
-                    # Convert the eventTime to Posix time and pass it to New Relic as a timestamp attribute
-                    this_event['timestamp']=time.mktime((parser.parse(this_event['eventTime'])).timetuple())
-                log_lines = cloudtrail_events
+        is_cloudtrail = _isCloudTrail(key)
 
-            for index, log in enumerate(log_lines):
-                log_batch_size += sys.getsizeof(str(log))
-                if index % 500 == 0:
-                    logger.debug(f"index: {index}")
-                    logger.debug(f"log_batch_size: {log_batch_size}")
-                log_batches.append(log)
-                if log_batch_size > (MAX_BATCH_SIZE * BATCH_SIZE_FACTOR):
-                    logger.debug(f"sending batch: {batch_counter} log_batch_size: {log_batch_size}")
-                    data = {"context": s3MetaData, "entry": log_batches}
-                    batch_request.append(create_log_payload_request(data, session))
-                    if len(batch_request) >= REQUEST_BATCH_SIZE:
-                        await asyncio.gather(*batch_request)
-                        batch_request = []
-                    log_batches = []
-                    log_batch_size = 0
-                    batch_counter += 1
+        try:
+            if is_cloudtrail:
+                log_lines = _iter_cloudtrail_events_streaming(log_file_url)
+                for index, log in enumerate(log_lines):
+                    if isinstance(log, dict):
+                        event_time = log.get('eventTime')
+                        if event_time:
+                            # Convert the eventTime to Posix time and pass it to New Relic as a timestamp attribute
+                            log['timestamp'] = time.mktime((parser.parse(event_time)).timetuple())
+
+                    log_batch_size += sys.getsizeof(str(log))
+                    if index % 500 == 0:
+                        logger.debug(f"index: {index}")
+                        logger.debug(f"log_batch_size: {log_batch_size}")
+                    log_batches.append(log)
+                    if log_batch_size > (MAX_BATCH_SIZE * BATCH_SIZE_FACTOR):
+                        logger.debug(f"sending batch: {batch_counter} log_batch_size: {log_batch_size}")
+                        data = {"context": s3MetaData, "entry": log_batches}
+                        batch_request.append(create_log_payload_request(data, session))
+                        if len(batch_request) >= REQUEST_BATCH_SIZE:
+                            await asyncio.gather(*batch_request)
+                            batch_request = []
+                        log_batches = []
+                        log_batch_size = 0
+                        batch_counter += 1
+            else:
+                with open(log_file_url, encoding='utf-8') as log_lines:
+                    for index, log in enumerate(log_lines):
+                        log_batch_size += sys.getsizeof(str(log))
+                        if index % 500 == 0:
+                            logger.debug(f"index: {index}")
+                            logger.debug(f"log_batch_size: {log_batch_size}")
+                        log_batches.append(log)
+                        if log_batch_size > (MAX_BATCH_SIZE * BATCH_SIZE_FACTOR):
+                            logger.debug(f"sending batch: {batch_counter} log_batch_size: {log_batch_size}")
+                            data = {"context": s3MetaData, "entry": log_batches}
+                            batch_request.append(create_log_payload_request(data, session))
+                            if len(batch_request) >= REQUEST_BATCH_SIZE:
+                                await asyncio.gather(*batch_request)
+                                batch_request = []
+                            log_batches = []
+                            log_batch_size = 0
+                            batch_counter += 1
+        except UncompressedSizeLimitExceeded:
+            logger.error(
+                "CloudTrail log exceeded MAX_FILE_SIZE after decompression; aborting to prevent resource exhaustion"
+            )
+            return
         data = {"context": s3MetaData, "entry": log_batches}
         batch_request.append(create_log_payload_request(data, session))
         logger.info("Sending data to NR logs.....")
