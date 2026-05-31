@@ -404,6 +404,8 @@ async def _fetch_data_from_s3(bucket, key, context):
             logger.error(
                 "CloudTrail log exceeded MAX_FILE_SIZE after decompression; aborting to prevent resource exhaustion"
             )
+            if batch_request:
+                await asyncio.gather(*batch_request, return_exceptions=True)
             return
         data = {"context": s3MetaData, "entry": log_batches}
         batch_request.append(create_log_payload_request(data, session))
