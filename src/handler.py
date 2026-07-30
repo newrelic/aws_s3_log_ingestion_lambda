@@ -104,16 +104,18 @@ def _isCloudTrail(key=None, regex_pattern=None):
     This functions checks whether this log file is a CloudTrail log based on regex pattern.
     """
     if not regex_pattern:
-        regex_pattern = _get_optional_env(
-            "S3_CLOUD_TRAIL_LOG_PATTERN", r"_CloudTrail_[^/]*\.json\.gz$")
-
-    return bool(re.search(regex_pattern, key))
+        regex_pattern = os.getenv("S3_CLOUD_TRAIL_LOG_PATTERN", "")
+    if regex_pattern:
+        return bool(re.search(regex_pattern, key))
+    # Default: string-based check avoids polynomial backtracking
+    return bool(key and key.endswith('.json.gz') and '_CloudTrail_' in key
+                and '_CloudTrail-Digest_' not in key)
 
 def _isCloudTrailDigest(key=None):
     """
     This functions checks whether this log file is a CloudTrail-Digest based on regex pattern.
     """
-    return bool(re.search(r"_CloudTrail-Digest_[^/]*\.json\.gz$", key))
+    return bool(key and key.endswith('.json.gz') and '_CloudTrail-Digest_' in key)
 
 def _convert_float(s):
     try:
